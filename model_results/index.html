@@ -321,6 +321,15 @@
             <button class="tab-button" onclick="switchTab('stress-survival')">
                 <span class="tab-icon">🏥</span>Stress 생존분석
             </button>
+            <button class="tab-button" onclick="switchTab('anxiety-survival-filtered')">
+                <span class="tab-icon">🎯</span>Anxiety 생존(필터)
+            </button>
+            <button class="tab-button" onclick="switchTab('depression-survival-filtered')">
+                <span class="tab-icon">🎯</span>Depression 생존(필터)
+            </button>
+            <button class="tab-button" onclick="switchTab('stress-survival-filtered')">
+                <span class="tab-icon">🎯</span>Stress 생존(필터)
+            </button>
         </div>
 
         <!-- 콘텐츠 영역 -->
@@ -463,6 +472,33 @@
                     <p>리포트를 불러오는 중...</p>
                 </div>
                 <iframe src="stress_survival_analysis_report.html"></iframe>
+            </div>
+
+            <!-- Anxiety 생존분석 (필터링) -->
+            <div id="anxiety-survival-filtered" class="tab-content">
+                <div class="loading active">
+                    <div class="spinner"></div>
+                    <p>리포트를 불러오는 중...</p>
+                </div>
+                <iframe src="anxiety_survival_analysis_filtered_report.html"></iframe>
+            </div>
+
+            <!-- Depression 생존분석 (필터링) -->
+            <div id="depression-survival-filtered" class="tab-content">
+                <div class="loading active">
+                    <div class="spinner"></div>
+                    <p>리포트를 불러오는 중...</p>
+                </div>
+                <iframe src="depression_survival_analysis_filtered_report.html"></iframe>
+            </div>
+
+            <!-- Stress 생존분석 (필터링) -->
+            <div id="stress-survival-filtered" class="tab-content">
+                <div class="loading active">
+                    <div class="spinner"></div>
+                    <p>리포트를 불러오는 중...</p>
+                </div>
+                <iframe src="stress_survival_analysis_filtered_report.html"></iframe>
             </div>
         </div>
     </div>
