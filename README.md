@@ -183,7 +183,9 @@ as21882927,0,23.5,42.6,...
 
 ---
 
-## 🚀 설치
+## 🚀 빠른 시작
+
+### 설치 및 실행
 
 ```bash
 # 저장소 clone
@@ -192,7 +194,18 @@ cd Lifelog_Pattern_Data_Generation
 
 # 필요한 패키지 설치
 pip install -r requirements.txt
+
+# macOS 사용자는 XGBoost를 위한 추가 설치
+brew install libomp
+
+# 통합 대시보드 열기 (모든 분석 결과 확인)
+open model_results/index.html
 ```
+
+**📚 상세 가이드**:
+- [QUICKSTART.md](QUICKSTART.md) - 5분 안에 시작하기
+- [SETUP.md](SETUP.md) - 완전한 설치 및 실행 가이드
+- [PCA_ANALYSIS_GUIDE.md](PCA_ANALYSIS_GUIDE.md) - PCA 분석 상세 가이드
 
 ## 🎯 빠른 시작: PCA 분석 웹 UI
 
@@ -611,33 +624,245 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 ---
 
+## 🤖 머신러닝 모델 비교
+
+선택된 10개 주요 변수로 정신건강 점수를 예측하는 모델을 비교합니다.
+
+### 실행 방법
+
+```bash
+python3 run_model_comparison.py
+```
+
+### 모델
+
+1. **RandomForest** - 앙상블 결정 트리
+2. **XGBoost** - 그래디언트 부스팅
+
+### 평가 지표
+
+- **R² Score**: 모델 설명력 (0~1, 높을수록 좋음)
+- **MAE**: 평균 절대 오차 (낮을수록 좋음)
+- **RMSE**: 평균 제곱근 오차 (낮을수록 좋음)
+- **Feature Importance**: 변수 중요도
+
+### 성능 결과
+
+| 모델 | Anxiety R² | Depression R² | Stress R² |
+|------|-----------|--------------|-----------|
+| RandomForest | 0.345 | 0.366 | 0.342 |
+| **XGBoost** | **0.359** | **0.380** | **0.357** |
+
+XGBoost가 모든 종속변수에서 우수한 성능을 보입니다.
+
+### 생성 결과
+
+- `model_results/anxiety_model_comparison_report.html`
+- `model_results/depression_model_comparison_report.html`
+- `model_results/stress_model_comparison_report.html`
+
+---
+
+## 📊 데이터 분할 (Train/Val/Test)
+
+재현 가능한 모델 학습을 위해 데이터를 7:2:1 비율로 분할합니다.
+
+### 실행 방법
+
+```bash
+python3 src/data_splitter.py
+```
+
+### 분할 전략
+
+- **Train**: 70% - 모델 학습용
+- **Validation**: 20% - 하이퍼파라미터 튜닝용
+- **Test**: 10% - 최종 성능 평가용
+
+### 계층화 분할 (Stratified Split)
+
+이진 분류 레이블의 클래스 비율을 유지하면서 분할:
+- 발생(≥4점) vs 미발생(<4점) 비율 동일 유지
+- Random seed 42로 재현성 보장
+
+### 생성 결과
+
+`data_splits/` 디렉토리:
+- `anxiety_train.csv`, `anxiety_val.csv`, `anxiety_test.csv`
+- `depression_train.csv`, `depression_val.csv`, `depression_test.csv`
+- `stress_train.csv`, `stress_val.csv`, `stress_test.csv`
+- `split_summary.csv` - 분할 요약
+
+---
+
+## 🏥 생존 분석 (Cox Proportional Hazards)
+
+정신건강 사건(≥4점) 발생을 예측하는 생존 분석을 수행합니다.
+
+### 실행 방법
+
+```bash
+# 전체 변수 생존 분석
+python3 src/survival_analysis.py
+
+# p-value < 0.05 변수만 사용 (개선된 모델)
+python3 src/survival_analysis_filtered.py
+```
+
+### Cox PH 모델
+
+**수식**:
+```
+h(t|X) = h₀(t) × exp(β₁X₁ + β₂X₂ + ... + βₙXₙ)
+```
+
+- `h(t|X)`: 시점 t에서 개인 X의 위험 함수
+- `h₀(t)`: 기준 위험 함수
+- `βᵢ`: 회귀 계수
+- `Xᵢ`: 예측 변수
+
+### 주요 분석 결과
+
+#### 1. C-index (Concordance Index)
+
+모델의 예측 정확도 (0.5=무작위, 1.0=완벽):
+
+| 종속변수 | 전체 변수 | 필터링 변수 (p<0.05) |
+|---------|----------|---------------------|
+| Anxiety | 0.6807 | **0.6838** ↑ |
+| Depression | 0.6971 | **0.6998** ↑ |
+| Stress | 0.6751 | **0.6795** ↑ |
+
+#### 2. Hazard Ratio (HR)
+
+변수 1단위 증가 시 사건 발생 위험 배수:
+
+**주요 위험 요인 (HR > 1)**:
+- `body_temperature`: HR 1.15 (p<0.001)
+- `blood_sugar`: HR 1.08 (p<0.01)
+
+**보호 요인 (HR < 1)**:
+- `total_sleep`: HR 0.92 (p<0.01)
+- `hrv`: HR 0.88 (p<0.05)
+
+#### 3. Likelihood Ratio Test
+
+모델의 전반적 유의성:
+- Anxiety: p < 10⁻¹⁷⁷ (극도로 유의)
+- Depression: p < 10⁻¹⁸⁴ (극도로 유의)
+- Stress: p < 10⁻¹⁸⁰ (극도로 유의)
+
+### 시각화
+
+각 리포트는 다음을 포함:
+
+1. **Kaplan-Meier 생존 곡선** - 시간에 따른 생존 확률
+2. **Hazard Ratio 플롯** - 변수별 위험도 (95% CI)
+3. **Nomogram** - 개인별 위험 점수 계산 도구
+4. **Calibration Plot** - 예측 정확도 검증
+5. **변수 선택 비교** (필터링 모델) - 전후 성능 비교
+
+### 생성 결과
+
+**전체 변수 모델**:
+- `model_results/anxiety_survival_analysis_report.html`
+- `model_results/depression_survival_analysis_report.html`
+- `model_results/stress_survival_analysis_report.html`
+
+**필터링 모델 (p<0.05)**:
+- `model_results/anxiety_survival_analysis_filtered_report.html`
+- `model_results/depression_survival_analysis_filtered_report.html`
+- `model_results/stress_survival_analysis_filtered_report.html`
+
+---
+
+## 📊 통합 대시보드
+
+모든 분석 결과를 하나의 웹 페이지에서 확인할 수 있습니다.
+
+### 열기
+
+```bash
+open model_results/index.html
+```
+
+### 구조
+
+```
+┌──────────────────────────────────────────┐
+│  통합 분석 대시보드                        │
+├──────────────────────────────────────────┤
+│ 🏠 홈                                     │
+│   ├─ 프로젝트 개요                        │
+│   ├─ 주요 발견                            │
+│   └─ 계층 분포                            │
+├──────────────────────────────────────────┤
+│ 📊 데이터 분포                            │
+│   ├─ 히스토그램                           │
+│   ├─ 박스플롯                             │
+│   └─ 바이올린 플롯                        │
+├──────────────────────────────────────────┤
+│ 🤖 모델 비교 ▼                            │
+│   ├─ Anxiety                             │
+│   ├─ Depression                          │
+│   └─ Stress                              │
+├──────────────────────────────────────────┤
+│ 🏥 생존 분석 ▼                            │
+│   ├─ Anxiety                             │
+│   ├─ Depression                          │
+│   └─ Stress                              │
+├──────────────────────────────────────────┤
+│ 🎯 생존(필터) ▼                           │
+│   ├─ Anxiety (p<0.05)                    │
+│   ├─ Depression (p<0.05)                 │
+│   └─ Stress (p<0.05)                     │
+└──────────────────────────────────────────┘
+```
+
+---
+
 ## 📂 프로젝트 구조
 
 ```
 Lifelog_Pattern_Data_Generation/
-├── KLOSDOM_Preprocessed_Dataset/       # 원본 데이터
-│   ├── whole_a01_hrv_20260621.csv
-│   ├── whole_a02_walk_20260621.csv
-│   ├── ... (18개 센서 데이터)
-│   ├── whole_e01_anxiety_20260621.csv
-│   ├── whole_e02_depression_20260621.csv
-│   ├── whole_e03_sleep_20260621.csv
-│   └── whole_e04_stress_20260621.csv
+├── KLOSDOM_Preprocessed_Dataset/       # 원본 데이터 (22개 CSV)
+│   ├── whole_a*.csv                    # 센서 데이터 (18개)
+│   └── whole_e*.csv                    # 설문 데이터 (4개)
 ├── src/                                 # 소스 코드
 │   ├── data_loader.py                  # 데이터 로드 및 전처리
 │   ├── pca_analyzer.py                 # PCA 분석 및 시각화
 │   ├── pattern_analyzer.py             # 패턴 분석 및 계층화
 │   ├── hierarchical_data_generator.py  # 계층화 데이터 생성
+│   ├── binary_classification_converter.py  # 이진 분류 변환
+│   ├── data_splitter.py                # 데이터 분할
+│   ├── model_comparison.py             # 모델 비교
+│   ├── survival_analysis.py            # 생존 분석
+│   ├── survival_analysis_filtered.py   # 필터링 생존 분석
+│   ├── data_distribution_visualizer.py # 데이터 분포 시각화
 │   └── app.py                          # Streamlit 웹 앱
 ├── hierarchical_data/                   # 생성된 계층화 데이터
-│   ├── anxiety_*_hierarchical_data.csv
-│   ├── anxiety_*_level_statistics.csv
-│   ├── anxiety_*_selected_features.csv
-│   ├── depression_*_... (동일 구조)
-│   └── stress_*_... (동일 구조)
+│   ├── *_hierarchical_data.csv         # 전체 계층화 데이터
+│   ├── *_binary_classification.csv     # 이진 분류 데이터
+│   ├── *_level_statistics.csv          # 계층별 통계
+│   ├── *_feature_importance.csv        # 변수 중요도
+│   └── *_level_*_*.csv                 # 계층별 데이터
+├── data_splits/                         # 분할된 데이터 (Train/Val/Test)
+│   ├── *_train.csv                     # 학습 데이터 (70%)
+│   ├── *_val.csv                       # 검증 데이터 (20%)
+│   ├── *_test.csv                      # 테스트 데이터 (10%)
+│   └── split_summary.csv               # 분할 요약
+├── model_results/                       # 분석 결과 HTML
+│   ├── index.html                      # 통합 대시보드 ⭐
+│   ├── data_distribution_report.html   # 데이터 분포
+│   ├── *_model_comparison_report.html  # 모델 비교 (3개)
+│   ├── *_survival_analysis_report.html # 생존 분석 (3개)
+│   └── *_survival_analysis_filtered_report.html  # 필터링 (3개)
 ├── requirements.txt                     # Python 패키지 목록
-├── run_pca_app.sh                      # 웹 앱 실행 스크립트
-├── README.md                           # 프로젝트 개요
+├── run_pca_app.sh                      # PCA 웹 앱 실행
+├── run_model_comparison.py             # 모델 비교 실행
+├── README.md                           # 프로젝트 개요 (이 파일)
+├── QUICKSTART.md                       # 빠른 시작 가이드
+├── SETUP.md                            # 상세 설정 가이드
 ├── PCA_ANALYSIS_GUIDE.md               # PCA 분석 가이드
 └── .gitignore
 ```
@@ -739,4 +964,57 @@ Lifelog_Pattern_Data_Generation/
 
 ---
 
+## 📚 전체 실행 파이프라인
+
+```bash
+# 1️⃣ PCA 분석 웹 UI (대화형)
+./run_pca_app.sh
+
+# 2️⃣ 계층화 데이터 생성
+python3 src/hierarchical_data_generator.py
+
+# 3️⃣ 이진 분류 변환
+python3 src/binary_classification_converter.py
+
+# 4️⃣ 데이터 분할 (Train/Val/Test)
+python3 src/data_splitter.py
+
+# 5️⃣ 데이터 분포 시각화
+python3 src/data_distribution_visualizer.py
+
+# 6️⃣ 모델 비교
+python3 run_model_comparison.py
+
+# 7️⃣ 생존 분석
+python3 src/survival_analysis.py
+python3 src/survival_analysis_filtered.py
+
+# 8️⃣ 통합 대시보드 확인
+open model_results/index.html
+```
+
+---
+
+## 🎓 참고 문헌
+
+### 분석 방법론
+
+- **PCA (Principal Component Analysis)**: Jolliffe, I. T. (2002). Principal Component Analysis.
+- **K-means Clustering**: MacQueen, J. (1967). Some methods for classification and analysis of multivariate observations.
+- **Cox Proportional Hazards**: Cox, D. R. (1972). Regression models and life-tables.
+- **RandomForest**: Breiman, L. (2001). Random forests.
+- **XGBoost**: Chen, T., & Guestrin, C. (2016). XGBoost: A scalable tree boosting system.
+
+### 응용 분야
+
+- **라이프로그 분석**: 웨어러블 센서 기반 건강 모니터링
+- **정신건강 예측**: 생체신호와 정신건강의 상관관계
+- **생존 분석**: 사건 발생 예측 및 위험 요인 식별
+
+---
+
+**Created**: 2026-06-21  
 **Last Updated**: 2026-06-21
+
+**Contact**: bosoagalaxy@gmail.com  
+**GitHub**: https://github.com/bosoa/Lifelog_Pattern_Data_Generation
