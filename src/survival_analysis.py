@@ -257,62 +257,101 @@ class SurvivalAnalyzer:
         return self._fig_to_base64(fig)
 
     def create_nomogram(self, cph, features: list, target_var: str) -> str:
-        """Nomogram 생성"""
+        """Nomogram 생성 (계수 기반 점수 할당)"""
         fig, ax = plt.subplots(figsize=(14, max(8, len(features) * 0.5 + 3)))
 
-        # Coefficients
+        # Coefficients와 통계
         coefs = cph.params_
+        summary = cph.summary
+
+        # 상위 10개 변수 선택 (절대 계수 크기 기준)
+        top_features = summary.nlargest(min(10, len(features)), 'abs(coef)').index.tolist()
+
+        # 점수 계산을 위한 최대 계수
+        max_abs_coef = np.abs(coefs[top_features]).max()
 
         # Nomogram 설정
-        n_features = len(features)
-        y_positions = np.linspace(1, 0.1, n_features + 3)  # 변수 + 총점 + 예측선
+        n_display = len(top_features)
+        y_positions = np.linspace(1, 0.1, n_display + 3)  # 변수 + 총점 + 예측선
 
         # 제목
         ax.text(0.5, y_positions[0] + 0.05, f'{target_var.upper()} Nomogram',
                ha='center', fontsize=16, fontweight='bold')
+        ax.text(0.5, y_positions[0] + 0.02, '(계수 기반 점수 할당)',
+               ha='center', fontsize=11, style='italic', color='#666')
 
-        # 각 변수별 점수 스케일
-        for idx, feature in enumerate(features[:min(10, len(features))]):
-            if feature not in coefs.index:
-                continue
-
+        # 각 변수별 점수 스케일 (계수에 비례)
+        for idx, feature in enumerate(top_features):
             y = y_positions[idx + 1]
             coef = coefs[feature]
 
-            # 변수명
-            ax.text(0.02, y, feature, fontsize=10, va='center')
+            # 변수명 및 계수 표시
+            ax.text(0.02, y, f'{feature}', fontsize=10, va='center', weight='bold')
+            ax.text(0.02, y - 0.02, f'β={coef:.3f}', fontsize=8, va='center',
+                   color='#666', style='italic')
 
-            # 점수 스케일 (0-100)
-            scale_start = 0.2
+            # 점수 범위 (계수 절대값에 비례, 최대 100점)
+            max_points = int(100 * (np.abs(coef) / max_abs_coef))
+            if max_points < 10:
+                max_points = 10  # 최소 10점
+
+            scale_start = 0.25
             scale_end = 0.95
-            scale_points = np.linspace(0, 100, 11)
+            n_ticks = min(6, max_points // 10 + 1)
+
+            # 점수 틱 생성
+            scale_points = np.linspace(0, max_points, n_ticks)
 
             for point in scale_points:
-                x = scale_start + (point / 100) * (scale_end - scale_start)
+                x = scale_start + (point / max_points) * (scale_end - scale_start) if max_points > 0 else scale_start
                 ax.plot([x, x], [y - 0.01, y + 0.01], 'k-', linewidth=1)
-                if int(point) % 20 == 0:
-                    ax.text(x, y - 0.03, f'{int(point)}',
-                           ha='center', fontsize=8)
+                ax.text(x, y - 0.03, f'{int(point)}',
+                       ha='center', fontsize=8)
 
-            # 스케일 라인
-            ax.plot([scale_start, scale_end], [y, y], 'k-', linewidth=2)
+            # 스케일 라인 (계수 방향에 따라 색상 변경)
+            line_color = '#d32f2f' if coef > 0 else '#1976d2'  # 빨강(위험증가), 파랑(위험감소)
+            line_width = scale_end - scale_start
+            actual_end = scale_start + line_width * (max_points / 100)
+            ax.plot([scale_start, actual_end], [y, y], color=line_color,
+                   linewidth=3, alpha=0.7)
 
-        # 총점 라인
+            # HR 표시
+            hr = np.exp(coef)
+            hr_text = f'HR={hr:.2f}'
+            ax.text(0.96, y, hr_text, fontsize=9, va='center',
+                   ha='left', color=line_color, weight='bold')
+
+        # 총점 라인 (0-100)
         y_total = y_positions[-2]
-        ax.text(0.02, y_total, '총점', fontsize=11, fontweight='bold', va='center')
-        ax.plot([0.2, 0.95], [y_total, y_total], 'b-', linewidth=3)
+        ax.text(0.02, y_total, '총점 (0-100)', fontsize=12,
+               fontweight='bold', va='center')
+        total_points = np.linspace(0, 100, 11)
+        for point in total_points:
+            x = 0.25 + (point / 100) * 0.7
+            ax.plot([x, x], [y_total - 0.01, y_total + 0.01], 'b-', linewidth=1)
+            if int(point) % 20 == 0:
+                ax.text(x, y_total - 0.03, f'{int(point)}',
+                       ha='center', fontsize=9, color='blue')
+        ax.plot([0.25, 0.95], [y_total, y_total], 'b-', linewidth=3)
 
-        # 예측 확률 라인
+        # 예측 위험 라인
         y_pred = y_positions[-1]
-        ax.text(0.02, y_pred, '이벤트 발생 확률', fontsize=11,
+        ax.text(0.02, y_pred, '예측 위험도', fontsize=12,
                fontweight='bold', va='center', color='red')
-        ax.plot([0.2, 0.95], [y_pred, y_pred], 'r-', linewidth=3)
 
-        # 확률 레이블
-        for prob in [0.1, 0.3, 0.5, 0.7, 0.9]:
-            x = 0.2 + prob * 0.75
-            ax.text(x, y_pred - 0.03, f'{prob:.1f}',
-                   ha='center', fontsize=9, color='red')
+        # 위험도 레이블 (상대적)
+        risk_labels = ['매우 낮음', '낮음', '보통', '높음', '매우 높음']
+        risk_positions = [0.25, 0.4, 0.6, 0.78, 0.95]
+        for label, x_pos in zip(risk_labels, risk_positions):
+            ax.plot([x_pos, x_pos], [y_pred - 0.01, y_pred + 0.01],
+                   'r-', linewidth=1)
+            ax.text(x_pos, y_pred - 0.03, label,
+                   ha='center', fontsize=8, color='red')
+        ax.plot([0.25, 0.95], [y_pred, y_pred], 'r-', linewidth=3)
+
+        # 범례
+        ax.text(0.02, 0.02, '🔴 빨간선: 위험 증가 (HR>1) | 🔵 파란선: 위험 감소 (HR<1)',
+               fontsize=9, color='#666')
 
         ax.set_xlim([0, 1])
         ax.set_ylim([0, y_positions[0] + 0.1])
