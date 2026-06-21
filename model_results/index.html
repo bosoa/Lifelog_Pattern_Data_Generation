@@ -284,60 +284,60 @@
 
         <!-- 탭 네비게이션 -->
         <div class="tab-navigation">
-            <button class="tab-button active" onclick="switchTab('home')">
+            <button class="tab-button active" onclick="switchTab('home', event)">
                 <span class="tab-icon">🏠</span>홈
             </button>
 
-            <button class="tab-button" onclick="switchTab('data-distribution')">
+            <button class="tab-button" onclick="switchTab('data-distribution', event)">
                 <span class="tab-icon">📊</span>데이터 분포
             </button>
 
             <div class="tab-group">
-                <button class="tab-button dropdown" onclick="toggleDropdown('model-dropdown')">
+                <button class="tab-button dropdown" onclick="toggleDropdown('model-dropdown', event)">
                     <span class="tab-icon">🤖</span>모델 비교
                 </button>
                 <div id="model-dropdown" class="dropdown-content">
-                    <div class="dropdown-item" onclick="switchTab('anxiety-model')">
+                    <div class="dropdown-item" onclick="switchTab('anxiety-model', event)">
                         😰 Anxiety
                     </div>
-                    <div class="dropdown-item" onclick="switchTab('depression-model')">
+                    <div class="dropdown-item" onclick="switchTab('depression-model', event)">
                         😔 Depression
                     </div>
-                    <div class="dropdown-item" onclick="switchTab('stress-model')">
+                    <div class="dropdown-item" onclick="switchTab('stress-model', event)">
                         😫 Stress
                     </div>
                 </div>
             </div>
 
             <div class="tab-group">
-                <button class="tab-button dropdown" onclick="toggleDropdown('survival-dropdown')">
+                <button class="tab-button dropdown" onclick="toggleDropdown('survival-dropdown', event)">
                     <span class="tab-icon">🏥</span>생존 분석
                 </button>
                 <div id="survival-dropdown" class="dropdown-content">
-                    <div class="dropdown-item" onclick="switchTab('anxiety-survival')">
+                    <div class="dropdown-item" onclick="switchTab('anxiety-survival', event)">
                         😰 Anxiety
                     </div>
-                    <div class="dropdown-item" onclick="switchTab('depression-survival')">
+                    <div class="dropdown-item" onclick="switchTab('depression-survival', event)">
                         😔 Depression
                     </div>
-                    <div class="dropdown-item" onclick="switchTab('stress-survival')">
+                    <div class="dropdown-item" onclick="switchTab('stress-survival', event)">
                         😫 Stress
                     </div>
                 </div>
             </div>
 
             <div class="tab-group">
-                <button class="tab-button dropdown" onclick="toggleDropdown('filtered-dropdown')">
+                <button class="tab-button dropdown" onclick="toggleDropdown('filtered-dropdown', event)">
                     <span class="tab-icon">🎯</span>생존(필터)
                 </button>
                 <div id="filtered-dropdown" class="dropdown-content">
-                    <div class="dropdown-item" onclick="switchTab('anxiety-survival-filtered')">
+                    <div class="dropdown-item" onclick="switchTab('anxiety-survival-filtered', event)">
                         😰 Anxiety (p<0.05)
                     </div>
-                    <div class="dropdown-item" onclick="switchTab('depression-survival-filtered')">
+                    <div class="dropdown-item" onclick="switchTab('depression-survival-filtered', event)">
                         😔 Depression (p<0.05)
                     </div>
-                    <div class="dropdown-item" onclick="switchTab('stress-survival-filtered')">
+                    <div class="dropdown-item" onclick="switchTab('stress-survival-filtered', event)">
                         😫 Stress (p<0.05)
                     </div>
                 </div>
@@ -486,7 +486,7 @@
     <script>
         let currentDropdown = null;
 
-        function toggleDropdown(dropdownId) {
+        function toggleDropdown(dropdownId, evt) {
             const dropdown = document.getElementById(dropdownId);
             const allDropdowns = document.querySelectorAll('.dropdown-content');
 
@@ -502,23 +502,30 @@
             currentDropdown = dropdown.classList.contains('show') ? dropdown : null;
 
             // 이벤트 전파 중지
-            event.stopPropagation();
+            if (evt) {
+                evt.stopPropagation();
+            }
         }
 
-        function switchTab(tabName) {
+        function switchTab(tabName, evt) {
             // 모든 탭 콘텐츠 비활성화
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
 
             // 선택된 탭 활성화
-            document.getElementById(tabName).classList.add('active');
+            const targetTab = document.getElementById(tabName);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
 
             // 드롭다운 아이템 활성화 상태 업데이트
             document.querySelectorAll('.dropdown-item').forEach(item => {
                 item.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (evt && evt.target) {
+                evt.target.classList.add('active');
+            }
 
             // 드롭다운 닫기
             if (currentDropdown) {
@@ -528,18 +535,20 @@
 
             // iframe 로딩 처리
             const activeContent = document.getElementById(tabName);
-            const iframe = activeContent.querySelector('iframe');
-            const loading = activeContent.querySelector('.loading');
+            if (activeContent) {
+                const iframe = activeContent.querySelector('iframe');
+                const loading = activeContent.querySelector('loading');
 
-            if (iframe && loading) {
-                iframe.onload = function() {
-                    loading.classList.remove('active');
-                };
+                if (iframe && loading) {
+                    iframe.onload = function() {
+                        loading.classList.remove('active');
+                    };
+                }
             }
 
             // 이벤트 전파 중지
-            if (event) {
-                event.stopPropagation();
+            if (evt) {
+                evt.stopPropagation();
             }
         }
 
