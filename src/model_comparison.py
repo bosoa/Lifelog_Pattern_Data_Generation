@@ -219,7 +219,7 @@ class ModelComparison:
         optimizer = optim.Adam(model.parameters(), lr=0.001)
 
         # 학습
-        epochs = kwargs.get('epochs', 50)
+        epochs = kwargs.get('epochs', 20)
         for epoch in range(epochs):
             model.train()
             for batch_X, batch_y in train_loader:
