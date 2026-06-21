@@ -96,10 +96,15 @@ class SurvivalAnalyzer:
         cph = CoxPHFitter(penalizer=0.01)
         cph.fit(model_data, duration_col='duration', event_col='event')
 
+        # 우도비 검정
+        lr_test = cph.log_likelihood_ratio_test()
+
         # 결과
         print(f"   ✓ Concordance Index: {cph.concordance_index_:.4f}")
         print(f"   ✓ Log-likelihood: {cph.log_likelihood_:.2f}")
         print(f"   ✓ AIC (partial): {cph.AIC_partial_:.2f}")
+        print(f"   ✓ LR Test Statistic: {lr_test.test_statistic:.2f}")
+        print(f"   ✓ LR Test p-value: {lr_test.p_value:.4e}")
 
         self.models[target_var] = cph
 
@@ -108,6 +113,8 @@ class SurvivalAnalyzer:
             'concordance_index': cph.concordance_index_,
             'log_likelihood': cph.log_likelihood_,
             'AIC': cph.AIC_partial_,
+            'lr_test_statistic': lr_test.test_statistic,
+            'lr_test_pvalue': lr_test.p_value,
             'summary': cph.summary
         }
 
@@ -486,17 +493,35 @@ class SurvivalAnalyzer:
                         <small style="color: #666;">모델 적합도</small>
                     </div>
                     <div class="metric-card">
-                        <h4>AIC</h4>
+                        <h4>AIC (partial)</h4>
                         <p>{cox_result['AIC']:.2f}</p>
                         <small style="color: #666;">정보 기준</small>
                     </div>
                 </div>
 
+                <div class="metrics-grid" style="margin-top: 20px;">
+                    <div class="metric-card" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);">
+                        <h4 style="color: white;">우도비 검정 통계량</h4>
+                        <p style="color: white;">{cox_result['lr_test_statistic']:.2f}</p>
+                        <small style="color: rgba(255,255,255,0.9);">LR Test Statistic</small>
+                    </div>
+                    <div class="metric-card" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);">
+                        <h4 style="color: white;">우도비 검정 p-value</h4>
+                        <p style="color: white;">{cox_result['lr_test_pvalue']:.4e}</p>
+                        <small style="color: rgba(255,255,255,0.9);">유의확률</small>
+                    </div>
+                </div>
+
                 <div class="insight-box">
-                    <h4>Concordance Index 해석</h4>
-                    <p>• C-index > 0.7: 우수한 식별력<br>
+                    <h4>해석 가이드</h4>
+                    <p><strong>Concordance Index:</strong><br>
+                       • C-index > 0.7: 우수한 식별력<br>
                        • C-index 0.6-0.7: 적절한 식별력<br>
                        • C-index < 0.6: 낮은 식별력</p>
+                    <p style="margin-top: 15px;"><strong>우도비 검정 (Likelihood Ratio Test):</strong><br>
+                       • p-value < 0.05: 모델이 통계적으로 유의미함 (귀무가설 기각)<br>
+                       • p-value ≥ 0.05: 모델이 통계적으로 유의미하지 않음<br>
+                       • 귀무가설: 모든 회귀 계수가 0 (변수들이 이벤트 발생에 영향 없음)</p>
                 </div>
             </div>
 
