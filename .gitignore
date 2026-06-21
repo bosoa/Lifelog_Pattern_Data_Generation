@@ -47,11 +47,5 @@ logs/
 .env
 .env.local
 
-# Generated data (too large for git)
-KLOSDOM_Preprocessed_Dataset/
-hierarchical_data/
-model_results/
-!model_results/index.html
-
 # Streamlit cache
 .streamlit/
