@@ -13,7 +13,13 @@ try:
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
+    import matplotlib.font_manager as fm
     import seaborn as sns
+
+    # 한글 폰트 설정 (macOS)
+    plt.rcParams['font.family'] = 'AppleGothic'
+    plt.rcParams['axes.unicode_minus'] = False  # 마이너스 기호 깨짐 방지
+
     PLOT_AVAILABLE = True
 except ImportError:
     PLOT_AVAILABLE = False
