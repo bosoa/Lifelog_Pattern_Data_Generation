@@ -196,37 +196,63 @@ class SurvivalAnalyzer:
             data[cph.params_.index]
         )
 
+        # 위험 점수를 0-1 범위로 정규화 (Min-Max Scaling)
+        risk_scores_normalized = (risk_scores - risk_scores.min()) / (risk_scores.max() - risk_scores.min())
+
         # 실제 이벤트 발생 여부
         actual_events = data['event'].values
 
         # Calibration curve 계산
         try:
             fraction_of_positives, mean_predicted_value = calibration_curve(
-                actual_events, risk_scores, n_bins=10, strategy='quantile'
+                actual_events, risk_scores_normalized, n_bins=10, strategy='quantile'
             )
 
             # Perfect calibration line
-            ax.plot([0, 1], [0, 1], 'k--', label='Perfect Calibration')
+            ax.plot([0, 1], [0, 1], 'k--', linewidth=2, label='Perfect Calibration',
+                   alpha=0.7)
 
             # Actual calibration
             ax.plot(mean_predicted_value, fraction_of_positives,
-                   'o-', linewidth=2, markersize=8, color='#667eea',
-                   label='모델 Calibration')
+                   'o-', linewidth=3, markersize=10, color='#667eea',
+                   label='모델 Calibration', markeredgecolor='white',
+                   markeredgewidth=2)
 
-            ax.set_xlabel('예측된 위험 점수 (정규화)', fontsize=12)
-            ax.set_ylabel('실제 이벤트 비율', fontsize=12)
+            # 신뢰구간 표시 (간단한 근사)
+            n_bins = len(fraction_of_positives)
+            for i in range(n_bins):
+                ax.plot([mean_predicted_value[i], mean_predicted_value[i]],
+                       [max(0, fraction_of_positives[i] - 0.05),
+                        min(1, fraction_of_positives[i] + 0.05)],
+                       color='#667eea', alpha=0.3, linewidth=2)
+
+            ax.set_xlabel('예측된 위험 점수 (정규화, 0-1)', fontsize=13, fontweight='bold')
+            ax.set_ylabel('실제 이벤트 발생 비율', fontsize=13, fontweight='bold')
             ax.set_title(f'{target_var.upper()} Calibration Plot',
-                        fontsize=14, fontweight='bold')
-            ax.legend(loc='upper left', fontsize=11)
-            ax.grid(alpha=0.3)
-            ax.set_xlim([0, 1])
-            ax.set_ylim([0, 1])
+                        fontsize=15, fontweight='bold', pad=20)
+            ax.legend(loc='upper left', fontsize=12, framealpha=0.9)
+            ax.grid(alpha=0.3, linestyle='--')
+            ax.set_xlim([-0.05, 1.05])
+            ax.set_ylim([-0.05, 1.05])
+
+            # 통계 정보 추가
+            from sklearn.metrics import brier_score_loss
+            brier_score = brier_score_loss(actual_events, risk_scores_normalized)
+            ax.text(0.98, 0.02, f'Brier Score: {brier_score:.4f}',
+                   ha='right', va='bottom', fontsize=10,
+                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8),
+                   transform=ax.transAxes)
 
         except Exception as e:
             ax.text(0.5, 0.5, f'Calibration 계산 오류:\n{str(e)}',
-                   ha='center', va='center', fontsize=12)
+                   ha='center', va='center', fontsize=12,
+                   bbox=dict(boxstyle='round', facecolor='#ffcccc', alpha=0.8))
             ax.set_xlim([0, 1])
             ax.set_ylim([0, 1])
+            ax.set_xlabel('예측된 위험 점수', fontsize=12)
+            ax.set_ylabel('실제 이벤트 비율', fontsize=12)
+            ax.set_title(f'{target_var.upper()} Calibration Plot (Error)',
+                        fontsize=14, fontweight='bold')
 
         return self._fig_to_base64(fig)
 
