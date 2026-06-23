@@ -1,6 +1,6 @@
 """
 종속변수 이진 분류 변환 모듈
-4점 이상: 발생 (1), 4점 미만: 미발생 (0)
+6점 이상: 발생 (1), 6점 미만: 미발생 (0)
 """
 import pandas as pd
 import numpy as np
@@ -173,8 +173,8 @@ class BinaryClassificationConverter:
 
 def main():
     """실행 예시"""
-    # 변환기 생성 (기준점: 4.0)
-    converter = BinaryClassificationConverter(threshold=4.0)
+    # 변환기 생성 (기준점: 6.0)
+    converter = BinaryClassificationConverter(threshold=6.0)
 
     # 모든 계층화 데이터 변환
     results = converter.convert_all_hierarchical_data()

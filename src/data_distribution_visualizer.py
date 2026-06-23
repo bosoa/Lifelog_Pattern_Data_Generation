@@ -204,10 +204,15 @@ class DataDistributionVisualizer:
 
     def _create_distribution_histogram(self, data: pd.DataFrame, target_var: str) -> str:
         """분포 히스토그램 생성"""
+        # 무한대 값 제거
+        data = data.copy()
+        score_col = f'{target_var}_score'
+        data = data[np.isfinite(data[score_col])]
+
         fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
         # 전체 분포
-        axes[0].hist(data[f'{target_var}_score'], bins=30, color='#667eea',
+        axes[0].hist(data[score_col], bins=30, color='#667eea',
                      alpha=0.7, edgecolor='black')
         axes[0].set_xlabel(f'{target_var.upper()} 점수', fontsize=12)
         axes[0].set_ylabel('빈도', fontsize=12)
@@ -243,10 +248,15 @@ class DataDistributionVisualizer:
 
     def _create_boxplot(self, data: pd.DataFrame, target_var: str) -> str:
         """박스플롯 생성"""
+        # 무한대 값 제거
+        data = data.copy()
+        score_col = f'{target_var}_score'
+        data = data[np.isfinite(data[score_col])]
+
         fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
         # 전체 박스플롯
-        axes[0].boxplot([data[f'{target_var}_score']],
+        axes[0].boxplot([data[score_col]],
                        labels=[target_var.upper()],
                        patch_artist=True,
                        boxprops=dict(facecolor='#667eea', alpha=0.7))
@@ -276,12 +286,17 @@ class DataDistributionVisualizer:
 
     def _create_violin_plot(self, data: pd.DataFrame, target_var: str) -> str:
         """바이올린 플롯 생성"""
+        # 무한대 값 제거
+        data = data.copy()
+        score_col = f'{target_var}_score'
+        data = data[np.isfinite(data[score_col])]
+
         fig, ax = plt.subplots(figsize=(12, 6))
 
         colors = ['#ffc107', '#ff9800', '#4caf50']
         positions = []
         for level in sorted(data['level'].unique()):
-            level_data = data[data['level'] == level][f'{target_var}_score'].values
+            level_data = data[data['level'] == level][score_col].values
             positions.append(level_data)
 
         parts = ax.violinplot(positions,
@@ -304,7 +319,10 @@ class DataDistributionVisualizer:
 
     def _calculate_statistics(self, data: pd.DataFrame, target_var: str) -> dict:
         """통계량 계산"""
-        score_data = data[f'{target_var}_score']
+        # 무한대 값 제거
+        score_col = f'{target_var}_score'
+        score_data = data[score_col]
+        score_data = score_data[np.isfinite(score_data)]
 
         stats = {
             '샘플 수': len(score_data),
@@ -529,26 +547,51 @@ class DataDistributionVisualizer:
 
 def main():
     """실행 예시"""
-    import glob
+    import sys
+    sys.path.append('src')
+    from data_loader import KLOSDOMDataLoader
+    import tempfile
+    import os
 
-    # 계층화 데이터 파일 찾기
-    hierarchical_files = glob.glob("hierarchical_data/*_hierarchical_data.csv")
+    loader = KLOSDOMDataLoader()
 
-    # 중복 제거
-    unique_files = {}
-    for filepath in hierarchical_files:
-        filename = Path(filepath).stem
-        target = filename.split('_')[0]
-        if target not in unique_files:
-            unique_files[target] = filepath
+    # 임시 디렉토리 생성
+    temp_dir = tempfile.mkdtemp()
+    data_paths = []
 
-    data_paths = [unique_files[t] for t in ['anxiety', 'depression', 'stress']
-                  if t in unique_files]
+    print("\n📊 원본 데이터(1-10점) 로드 중...")
+
+    # 각 타겟별로 원본 데이터 로드 및 임시 파일 생성
+    for target in ['anxiety', 'depression', 'stress']:
+        X, y, feature_names = loader.prepare_pca_data(
+            target_variable=target,
+            min_data_points=10
+        )
+
+        # 데이터 결합
+        data = X.copy()
+        data[f'{target}_score'] = y.values
+
+        # 레벨 생성 (1-3점: 낮음, 4-6점: 중간, 7-10점: 높음)
+        data['level'] = pd.cut(y, bins=[0, 3, 6, 10], labels=[0, 1, 2], include_lowest=True)
+        data['level_name'] = data['level'].map({0: '낮음', 1: '중간', 2: '높음'})
+
+        # 임시 파일 저장
+        temp_file = os.path.join(temp_dir, f'{target}_hierarchical_data.csv')
+        data.to_csv(temp_file, index=False)
+        data_paths.append(temp_file)
+
+        print(f"   ✓ {target.upper()}: {len(y):,}개 샘플 (범위: {y.min():.0f}-{y.max():.0f})")
 
     # 리포트 생성
     visualizer = DataDistributionVisualizer()
     output_path = "model_results/data_distribution_report.html"
     visualizer.generate_report(data_paths, output_path)
+
+    # 임시 파일 삭제
+    for filepath in data_paths:
+        os.remove(filepath)
+    os.rmdir(temp_dir)
 
     print(f"\n✅ 데이터 분포 리포트 생성 완료!")
     print(f"   📄 {output_path}")

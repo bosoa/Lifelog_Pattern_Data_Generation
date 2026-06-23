@@ -92,8 +92,8 @@ class SurvivalAnalyzer:
         # 결측치 제거
         model_data = model_data.dropna()
 
-        # Cox PH Fitter
-        cph = CoxPHFitter(penalizer=0.01)
+        # Cox PH Fitter (penalizer를 높여서 다중공선성 완화)
+        cph = CoxPHFitter(penalizer=0.1)
         cph.fit(model_data, duration_col='duration', event_col='event')
 
         # 우도비 검정
@@ -265,7 +265,8 @@ class SurvivalAnalyzer:
         summary = cph.summary
 
         # 상위 10개 변수 선택 (절대 계수 크기 기준)
-        top_features = summary.nlargest(min(10, len(features)), 'abs(coef)').index.tolist()
+        summary['abs_coef'] = summary['coef'].abs()
+        top_features = summary.nlargest(min(10, len(features)), 'abs_coef').index.tolist()
 
         # 점수 계산을 위한 최대 계수
         max_abs_coef = np.abs(coefs[top_features]).max()
@@ -670,32 +671,47 @@ class SurvivalAnalyzer:
 
 def main():
     """실행 예시"""
-    import glob
-
-    # 이진 분류 데이터 찾기
-    files = glob.glob("hierarchical_data/*_binary_classification.csv")
+    import sys
+    sys.path.append('src')
+    from data_loader import KLOSDOMDataLoader
 
     # 출력 디렉토리
     output_dir = Path("model_results")
     output_dir.mkdir(exist_ok=True)
 
     analyzer = SurvivalAnalyzer()
+    loader = KLOSDOMDataLoader()
 
-    for filepath in files:
-        filename = Path(filepath).stem
-        target = filename.split('_')[0]
-
+    for target in ['anxiety', 'depression', 'stress']:
         print(f"\n{'='*70}")
         print(f"생존 분석: {target.upper()}")
         print(f"{'='*70}")
 
-        # 데이터 로드
-        data = pd.read_csv(filepath)
+        # 원본 데이터에서 직접 로드 (계층화 없이)
+        X, y, feature_names = loader.prepare_pca_data(
+            target_variable=target,
+            min_data_points=10
+        )
 
-        # 특징 컬럼 (level, binary, label, score 제외)
-        exclude_cols = ['level', 'level_name', f'{target}_binary',
-                       f'{target}_label', f'{target}_score']
-        features = [col for col in data.columns if col not in exclude_cols]
+        # 분산이 0이거나 매우 낮은 컬럼 제거
+        low_variance_cols = ['wakeup_time', 'bed_time', 'blood_pressure']
+        X_filtered = X[[col for col in X.columns if col not in low_variance_cols]]
+        feature_names_filtered = [col for col in feature_names if col not in low_variance_cols]
+
+        # 이진 분류 변수 생성 (≥7 = 고위험)
+        y_binary = (y >= 7).astype(int)
+
+        # 데이터 결합
+        data = X_filtered.copy()
+        data[f'{target}_score'] = y.values
+        data[f'{target}_binary'] = y_binary
+
+        # 레벨 생성 (생존 분석을 위한 시간 계층)
+        # 점수 기반으로 3단계 레벨 생성 (낮음, 중간, 높음)
+        data['level'] = pd.cut(y, bins=[0, 4, 7, 10], labels=[0, 1, 2], include_lowest=True)
+
+        # 특징 컬럼
+        features = feature_names_filtered
 
         # HTML 리포트 생성
         output_path = output_dir / f"{target}_survival_analysis_report.html"

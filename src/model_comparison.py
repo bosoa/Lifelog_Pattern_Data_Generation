@@ -333,17 +333,57 @@ class ModelComparison:
 
 def main():
     """실행 예시"""
+    import sys
+    sys.path.append('src')
+    from data_loader import KLOSDOMDataLoader
+    import tempfile
+    import os
+
+    loader = KLOSDOMDataLoader()
     comparison = ModelComparison(output_dir="model_results")
 
-    # 불안 데이터로 모델 비교
-    results = comparison.train_all_models(
-        hierarchical_data_path="hierarchical_data/anxiety_*_hierarchical_data.csv"
-    )
+    print("\n📊 원본 데이터(1-10점)로 모델 비교 수행")
+    print("="*70)
 
-    # 결과 요약
-    summary = comparison.get_comparison_summary()
-    print("\n📊 모델 비교 요약:")
-    print(summary.to_string(index=False))
+    # 각 타겟별로 원본 데이터 로드 및 모델 학습
+    for target in ['anxiety', 'depression', 'stress']:
+        print(f"\n{'='*70}")
+        print(f"{target.upper()} 모델 비교")
+        print(f"{'='*70}")
+
+        # 원본 데이터 로드
+        X, y, feature_names = loader.prepare_pca_data(
+            target_variable=target,
+            min_data_points=10
+        )
+
+        print(f"   ✓ 샘플 수: {len(y):,}")
+        print(f"   ✓ 점수 범위: {y.min():.0f} ~ {y.max():.0f}")
+        print(f"   ✓ 평균: {y.mean():.2f}")
+
+        # 임시 파일 생성
+        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False)
+        data = X.copy()
+        data[f'{target}_score'] = y.values
+        data.to_csv(temp_file.name, index=False)
+        temp_file.close()
+
+        # 모델 학습
+        results = comparison.train_all_models(
+            hierarchical_data_path=temp_file.name
+        )
+
+        # 임시 파일 삭제
+        os.remove(temp_file.name)
+
+        # 결과 요약
+        summary = comparison.get_comparison_summary()
+        print(f"\n📊 {target.upper()} 모델 비교 요약:")
+        print(summary.to_string(index=False))
+
+    print(f"\n{'='*70}")
+    print("✅ 모든 모델 비교 완료!")
+    print(f"{'='*70}")
 
 
 if __name__ == "__main__":
