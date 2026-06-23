@@ -334,6 +334,92 @@
                         <em>atan2는 모든 사분면에서 올바른 각도를 계산하는 함수입니다 (-π ~ π)</em>
                     </p>
                 </div>
+
+                <h3>🔢 atan2 함수란?</h3>
+                <div class="info-box">
+                    <p><strong>atan2(y, x)</strong>는 일반적인 역탄젠트 함수(atan)의 확장 버전으로, 두 개의 인자를 받아 모든 사분면에서 올바른 각도를 계산합니다.</p>
+
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">왜 일반 atan이 아닌 atan2를 사용할까?</h4>
+                    <ul>
+                        <li><strong>일반 atan(y/x)의 문제점:</strong>
+                            <ul style="margin-top: 5px;">
+                                <li>x = 0일 때 나눗셈 오류 발생 (0으로 나누기)</li>
+                                <li>결과 범위가 -π/2 ~ π/2로 제한되어 1, 4사분면만 구별 가능</li>
+                                <li>예: atan(1/1) = 45°, atan(-1/-1) = 45° → 1사분면과 3사분면을 구분 못함</li>
+                            </ul>
+                        </li>
+                        <li><strong>atan2(y, x)의 장점:</strong>
+                            <ul style="margin-top: 5px;">
+                                <li>x와 y의 부호를 모두 고려하여 정확한 사분면 판별</li>
+                                <li>x = 0인 경우도 안전하게 처리 (90° 또는 -90° 반환)</li>
+                                <li>결과 범위: -π ~ π (모든 사분면 커버, -180° ~ 180°)</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">사분면별 처리 방식</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <thead style="background: #f8f9fa;">
+                            <tr>
+                                <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">사분면</th>
+                                <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">x, y 부호</th>
+                                <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">atan2(y, x) 범위</th>
+                                <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">예시</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><strong>1사분면</strong></td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">x > 0, y > 0</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">0 ~ π/2 (0° ~ 90°)</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">atan2(1, 1) = 45°</td>
+                            </tr>
+                            <tr style="background: #fafafa;">
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><strong>2사분면</strong></td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">x < 0, y > 0</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">π/2 ~ π (90° ~ 180°)</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">atan2(1, -1) = 135°</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><strong>3사분면</strong></td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">x < 0, y < 0</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">-π ~ -π/2 (-180° ~ -90°)</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">atan2(-1, -1) = -135°</td>
+                            </tr>
+                            <tr style="background: #fafafa;">
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><strong>4사분면</strong></td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">x > 0, y < 0</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">-π/2 ~ 0 (-90° ~ 0°)</td>
+                                <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">atan2(-1, 1) = -45°</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">특수한 경우 처리</h4>
+                    <ul>
+                        <li><strong>x = 0, y > 0:</strong> atan2(y, 0) = π/2 (90°) - 정북</li>
+                        <li><strong>x = 0, y < 0:</strong> atan2(y, 0) = -π/2 (-90°) - 정남</li>
+                        <li><strong>x > 0, y = 0:</strong> atan2(0, x) = 0 (0°) - 정동</li>
+                        <li><strong>x < 0, y = 0:</strong> atan2(0, x) = π (180°) - 정서</li>
+                        <li><strong>x = 0, y = 0:</strong> atan2(0, 0) = 0 (구현에 따라 정의되지 않을 수도 있음)</li>
+                    </ul>
+
+                    <h4 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">실제 적용 예시</h4>
+                    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-top: 10px;">
+                        <pre style="margin: 0; font-size: 0.9em;"><code>// JavaScript에서
+Math.atan2(30, 50)    // → 0.54 rad (30.96°)  - 1사분면
+Math.atan2(30, -50)   // → 2.60 rad (149.04°) - 2사분면
+Math.atan2(-30, -50)  // → -2.60 rad (-149.04°) - 3사분면
+Math.atan2(-30, 50)   // → -0.54 rad (-30.96°) - 4사분면
+
+// Python에서
+import numpy as np
+np.arctan2(30, 50)    # → 0.54 rad (30.96°)
+np.arctan2(30, -50)   # → 2.60 rad (149.04°)
+np.arctan2(-30, -50)  # → -2.60 rad (-149.04°)
+np.arctan2(-30, 50)   # → -0.54 rad (-30.96°)</code></pre>
+                    </div>
+                </div>
             </div>
 
             <!-- 인터랙티브 시각화 -->
