@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>생존 분석 대시보드 - 새로운 임계값 기준</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+                         'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 60px 50px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+        }
+
+        .header .subtitle {
+            font-size: 1.3em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .header .meta {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .header .meta-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header .meta-label {
+            font-size: 0.9em;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .header .meta-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .section-title {
+            background: white;
+            border-radius: 15px;
+            padding: 25px 40px;
+            margin: 40px 0 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section-title h2 {
+            color: #667eea;
+            font-size: 2em;
+        }
+
+        .section-title p {
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .report-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .report-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .report-card .card-header {
+            padding: 35px 25px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .report-card .card-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: rgba(255,255,255,0.1);
+            transform: rotate(45deg);
+        }
+
+        .report-card.primary .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .report-card.info .card-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .report-card.warning .card-header {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .report-card.success .card-header {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        }
+
+        .report-card.danger .card-header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .report-card .card-icon {
+            font-size: 2.5em;
+            margin-bottom: 12px;
+        }
+
+        .report-card .card-title {
+            font-size: 1.6em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .report-card .card-subtitle {
+            font-size: 1em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .report-card .card-body {
+            padding: 25px;
+        }
+
+        .report-card .highlight-badge {
+            display: inline-block;
+            background: #4caf5020;
+            color: #2e7d32;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .report-card .stats-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .report-card .stats-row:last-child {
+            border-bottom: none;
+        }
+
+        .report-card .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .report-card .stat-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .report-card .view-button {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .report-card .view-button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .coordinate-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .coordinate-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .footer {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 40px;
+        }
+
+        .footer strong {
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 40px 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .header .subtitle {
+                font-size: 1.1em;
+            }
+
+            .reports-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📊 생존 분석 종합 대시보드</h1>
+            <div class="subtitle">Comprehensive Survival Analysis Dashboard</div>
+            <p style="color: #999; margin-top: 10px;">새로운 임계값 기준 (우울 ≥6점, 스트레스 ≥5점) + 좌표 변환 분석</p>
+
+            <div class="meta">
+                <div class="meta-item">
+                    <div class="meta-label">분석 방법론</div>
+                    <div class="meta-value">Cox PH Model</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">좌표계</div>
+                    <div class="meta-value">4가지</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">타겟 변수</div>
+                    <div class="meta-value">2개</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">총 리포트</div>
+                    <div class="meta-value">12개</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Core Reports -->
+        <div class="section-title">
+            <h2>📋 핵심 분석 리포트</h2>
+            <p>데이터 준비 및 기본 통계 분석</p>
+        </div>
+
+        <div class="reports-grid">
+            <div class="report-card info" onclick="window.location.href='covariates_table1.html'">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">독립변수 Table 1</div>
+                    <div class="card-subtitle">Covariates Descriptive Statistics</div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-badge">✨ 논문용 테이블</div>
+                    <div class="stats-row">
+                        <span class="stat-label">센서 변수</span>
+                        <span class="stat-value">10개</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">통계 지표</span>
+                        <span class="stat-value">기술통계 전체</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">시계열 설명</span>
+                        <span class="stat-value">포함</span>
+                    </div>
+                    <a href="covariates_table1.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+
+            <div class="report-card primary" onclick="window.location.href='endpoint_data_aggregation.html'">
+                <div class="card-header">
+                    <div class="card-icon">🎯</div>
+                    <div class="card-title">종단점 데이터 집계</div>
+                    <div class="card-subtitle">Endpoint Data Aggregation</div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-badge">✨ 데이터 파이프라인</div>
+                    <div class="stats-row">
+                        <span class="stat-label">집계 단계</span>
+                        <span class="stat-value">6단계</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">임계값 정의</span>
+                        <span class="stat-value">우울 ≥6, 스트레스 ≥5</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">품질 관리</span>
+                        <span class="stat-value">상세 설명</span>
+                    </div>
+                    <a href="endpoint_data_aggregation.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cartesian Coordinate Analysis -->
+        <div class="section-title">
+            <h2>📐 직교좌표 생존 분석</h2>
+            <p>원본 센서 데이터 기반 Cox PH 분석 (Baseline)</p>
+        </div>
+
+        <div class="reports-grid">
+            <div class="report-card danger" onclick="window.location.href='depression_survival_analysis.html'">
+                <div class="card-header">
+                    <div class="card-icon">💙</div>
+                    <div class="card-title">우울 생존 분석</div>
+                    <div class="card-subtitle">Depression (Cartesian)</div>
+                </div>
+                <div class="card-body">
+                    <div class="stats-row">
+                        <span class="stat-label">C-index</span>
+                        <span class="stat-value" style="color: #667eea;">0.6121</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">이벤트 발생률</span>
+                        <span class="stat-value">18.29%</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">샘플 수</span>
+                        <span class="stat-value">12,923건</span>
+                    </div>
+                    <a href="depression_survival_analysis.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+
+            <div class="report-card success" onclick="window.location.href='stress_survival_analysis.html'">
+                <div class="card-header">
+                    <div class="card-icon">💚</div>
+                    <div class="card-title">스트레스 생존 분석</div>
+                    <div class="card-subtitle">Stress (Cartesian)</div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-badge">🏆 최고 성능</div>
+                    <div class="stats-row">
+                        <span class="stat-label">C-index</span>
+                        <span class="stat-value" style="color: #4caf50;">0.7128</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">이벤트 발생률</span>
+                        <span class="stat-value">61.88%</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">샘플 수</span>
+                        <span class="stat-value">13,503건</span>
+                    </div>
+                    <a href="stress_survival_analysis.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coordinate Transformation Analysis -->
+        <div class="section-title">
+            <h2>🔄 좌표 변환 생존 분석</h2>
+            <p>극좌표, 구면좌표, 원통좌표 변환 기반 성능 향상 분석</p>
+        </div>
+
+        <!-- Depression Coordinate Analysis -->
+        <h3 style="color: white; margin: 30px 0 20px 20px; font-size: 1.5em;">💙 우울 (Depression)</h3>
+        <div class="coordinate-grid">
+            <div class="report-card warning" onclick="window.location.href='depression_polar_survival_analysis.html'">
+                <div class="card-header">
+                    <div class="card-icon">📐</div>
+                    <div class="card-title">극좌표 변환</div>
+                    <div class="card-subtitle">Polar Coordinate</div>
+                </div>
+                <div class="card-body">
+                    <div class="stats-row">
+                        <span class="stat-label">C-index</span>
+                        <span class="stat-value">0.6291</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">직교좌표 대비</span>
+                        <span class="stat-value" style="color: #4caf50;">+2.78%</span>
+                    </div>
+                    <a href="depression_polar_survival_analysis.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+
+            <div class="report-card warning" onclick="window.location.href='depression_sphere_survival_analysis.html'">
+                <div class="card-header">
+                    <div class="card-icon">🌐</div>
+                    <div class="card-title">구면좌표 변환</div>
+                    <div class="card-subtitle">Spherical Coordinate</div>
+                </div>
+                <div class="card-body">
+                    <div class="stats-row">
+                        <span class="stat-label">C-index</span>
+                        <span class="stat-value">0.6451</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">직교좌표 대비</span>
+                        <span class="stat-value" style="color: #4caf50;">+5.39%</span>
+                    </div>
+                    <a href="depression_sphere_survival_analysis.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+
+            <div class="report-card warning" onclick="window.location.href='depression_cylinder_survival_analysis.html'">
+                <div class="card-header">
+                    <div class="card-icon">🔵</div>
+                    <div class="card-title">원통좌표 변환</div>
+                    <div class="card-subtitle">Cylindrical Coordinate</div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-badge">🏆 우울 최고 성능</div>
+                    <div class="stats-row">
+                        <span class="stat-label">C-index</span>
+                        <span class="stat-value" style="color: #4caf50;">0.6555</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">직교좌표 대비</span>
+                        <span class="stat-value" style="color: #4caf50;">+7.09%</span>
+                    </div>
+                    <a href="depression_cylinder_survival_analysis.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stress Coordinate Analysis -->
+        <h3 style="color: white; margin: 40px 0 20px 20px; font-size: 1.5em;">💚 스트레스 (Stress)</h3>
+        <div class="coordinate-grid">
+            <div class="report-card info" onclick="window.location.href='stress_polar_survival_analysis.html'">
+                <div class="card-header">
+                    <div class="card-icon">📐</div>
+                    <div class="card-title">극좌표 변환</div>
+                    <div class="card-subtitle">Polar Coordinate</div>
+                </div>
+                <div class="card-body">
+                    <div class="stats-row">
+                        <span class="stat-label">C-index</span>
+                        <span class="stat-value">0.6709</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">직교좌표 대비</span>
+                        <span class="stat-value" style="color: #f44336;">-5.88%</span>
+                    </div>
+                    <a href="stress_polar_survival_analysis.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+
+            <div class="report-card info" onclick="window.location.href='stress_sphere_survival_analysis.html'">
+                <div class="card-header">
+                    <div class="card-icon">🌐</div>
+                    <div class="card-title">구면좌표 변환</div>
+                    <div class="card-subtitle">Spherical Coordinate</div>
+                </div>
+                <div class="card-body">
+                    <div class="stats-row">
+                        <span class="stat-label">C-index</span>
+                        <span class="stat-value">0.6960</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">직교좌표 대비</span>
+                        <span class="stat-value" style="color: #f44336;">-2.36%</span>
+                    </div>
+                    <a href="stress_sphere_survival_analysis.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+
+            <div class="report-card info" onclick="window.location.href='stress_cylinder_survival_analysis.html'">
+                <div class="card-header">
+                    <div class="card-icon">🔵</div>
+                    <div class="card-title">원통좌표 변환</div>
+                    <div class="card-subtitle">Cylindrical Coordinate</div>
+                </div>
+                <div class="card-body">
+                    <div class="stats-row">
+                        <span class="stat-label">C-index</span>
+                        <span class="stat-value">0.6849</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">직교좌표 대비</span>
+                        <span class="stat-value" style="color: #f44336;">-3.91%</span>
+                    </div>
+                    <a href="stress_cylinder_survival_analysis.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Comparison -->
+        <div class="section-title" style="margin-top: 50px;">
+            <h2>📈 성능 비교 분석</h2>
+            <p>좌표계별 모델 성능 종합 비교</p>
+        </div>
+
+        <div class="reports-grid" style="grid-template-columns: 1fr;">
+            <div class="report-card primary" onclick="window.location.href='coordinate_performance_comparison.html'">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">좌표 변환 성능 비교</div>
+                    <div class="card-subtitle">Coordinate Transformation Performance Comparison</div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-badge">✨ 종합 분석</div>
+                    <p style="color: #666; margin: 15px 0;">
+                        직교좌표, 극좌표, 구면좌표, 원통좌표 총 4가지 좌표계에서의
+                        Cox PH 모델 성능을 비교 분석합니다. 우울과 스트레스 각각에 대해
+                        최적의 좌표계를 식별하고 성능 향상률을 제시합니다.
+                    </p>
+                    <div class="stats-row">
+                        <span class="stat-label">우울 최고 성능</span>
+                        <span class="stat-value" style="color: #667eea;">원통좌표 (0.6555)</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stat-label">스트레스 최고 성능</span>
+                        <span class="stat-value" style="color: #4caf50;">직교좌표 (0.7128)</span>
+                    </div>
+                    <a href="coordinate_performance_comparison.html" class="view-button">리포트 보기 →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>KLOSDOM Lifelog Pattern Data Generation System</strong></p>
+            <p>Comprehensive Survival Analysis Dashboard</p>
+            <p style="margin-top: 15px; font-size: 0.9em;">
+                생성 일시: 2026년 6월 28일 | 표준화 적용 완료
+            </p>
+            <p style="margin-top: 10px; font-size: 0.85em; color: #999;">
+                Cox Proportional Hazards Model with Z-score Standardization
+            </p>
+        </div>
+    </div>
+</body>
+</html>

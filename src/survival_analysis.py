@@ -92,6 +92,10 @@ class SurvivalAnalyzer:
         # 결측치 제거
         model_data = model_data.dropna()
 
+        # 특징 표준화 (Z-score normalization)
+        scaler = StandardScaler()
+        model_data[features] = scaler.fit_transform(model_data[features])
+
         # Cox PH Fitter (penalizer를 높여서 다중공선성 완화)
         cph = CoxPHFitter(penalizer=0.1)
         cph.fit(model_data, duration_col='duration', event_col='event')

@@ -1,0 +1,774 @@
+#!/usr/bin/env python3
+"""
+독립변수(공변량) Table 1 및 시계열 데이터 취합 과정 생성
+"""
+
+import pandas as pd
+import numpy as np
+from pathlib import Path
+from datetime import datetime
+
+def load_data_for_analysis():
+    """분석용 데이터 로드"""
+    data = {}
+
+    # 직교좌표 데이터
+    for target in ['depression', 'stress']:
+        file_path = Path("hierarchical_data") / f"{target}_binary_classification.csv"
+        if file_path.exists():
+            df = pd.read_csv(file_path)
+            data[f'{target}_cartesian'] = df
+
+    return data
+
+def create_covariates_table1(datasets):
+    """독립변수 Table 1 생성"""
+
+    # 센서 변수 목록
+    sensor_vars = [
+        'stick_sensor', 'heart_beat', 'total_sleep', 'rem_sleep',
+        'body_temperature', 'walk', 'skin_temperature',
+        'oxygen_saturation', 'deep_sleep', 'hrv'
+    ]
+
+    # 변수 설명
+    var_descriptions = {
+        'stick_sensor': ('스틱 센서', 'counts', '활동 강도를 측정하는 움직임 카운트'),
+        'heart_beat': ('심박수', 'bpm', '분당 심장 박동 수'),
+        'total_sleep': ('총 수면시간', 'minutes', '전체 수면 시간'),
+        'rem_sleep': ('REM 수면', 'minutes', '급속 안구 운동 수면 시간'),
+        'body_temperature': ('체온', '°C', '신체 중심 온도'),
+        'walk': ('걷기', 'steps', '일일 걸음 수'),
+        'skin_temperature': ('피부온도', '°C', '피부 표면 온도'),
+        'oxygen_saturation': ('산소포화도', '%', '혈액 내 산소 포화 비율'),
+        'deep_sleep': ('깊은 수면', 'minutes', '서파 수면 시간'),
+        'hrv': ('심박변이도', 'ms', '심박 간격의 변동성')
+    }
+
+    # 데이터프레임 생성
+    table_rows = []
+
+    # 우울 데이터셋 사용 (예시)
+    df = datasets.get('depression_cartesian')
+
+    if df is not None:
+        for var in sensor_vars:
+            if var in df.columns:
+                korean_name, unit, description = var_descriptions.get(var, (var, '-', ''))
+
+                data_vals = df[var].dropna()
+
+                table_rows.append({
+                    'Variable': var,
+                    'Korean': korean_name,
+                    'Unit': unit,
+                    'Description': description,
+                    'N': len(data_vals),
+                    'Mean': f'{data_vals.mean():.2f}',
+                    'SD': f'{data_vals.std():.2f}',
+                    'Min': f'{data_vals.min():.2f}',
+                    'Q1': f'{data_vals.quantile(0.25):.2f}',
+                    'Median': f'{data_vals.quantile(0.50):.2f}',
+                    'Q3': f'{data_vals.quantile(0.75):.2f}',
+                    'Max': f'{data_vals.max():.2f}'
+                })
+
+    return pd.DataFrame(table_rows)
+
+def generate_html_report(table_df):
+    """HTML 리포트 생성"""
+
+    html_content = f"""
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>독립변수(공변량) Table 1 및 시계열 데이터 취합</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px;
+        }}
+
+        .container {{
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }}
+
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 50px;
+            text-align: center;
+        }}
+
+        .header h1 {{
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }}
+
+        .content {{
+            padding: 50px;
+        }}
+
+        .section {{
+            margin-bottom: 50px;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }}
+
+        .section h2 {{
+            color: #667eea;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 4px solid #667eea;
+        }}
+
+        .section h3 {{
+            color: #764ba2;
+            font-size: 1.6em;
+            margin: 30px 0 20px 0;
+        }}
+
+        .info-box {{
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-left: 5px solid #667eea;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 10px;
+        }}
+
+        .info-box h4 {{
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }}
+
+        .info-box ul {{
+            margin-left: 20px;
+            margin-top: 10px;
+        }}
+
+        .info-box li {{
+            margin: 8px 0;
+        }}
+
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.9em;
+        }}
+
+        th {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 10px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 0.95em;
+        }}
+
+        td {{
+            padding: 12px 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }}
+
+        tr:hover {{
+            background: #f5f5f5;
+        }}
+
+        tr:nth-child(even) {{
+            background: #fafafa;
+        }}
+
+        tr:nth-child(even):hover {{
+            background: #f0f0f0;
+        }}
+
+        .flow-diagram {{
+            margin: 40px 0;
+        }}
+
+        .flow-step {{
+            background: white;
+            padding: 25px;
+            margin: 15px 0;
+            border-radius: 12px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }}
+
+        .flow-step h4 {{
+            color: #667eea;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }}
+
+        .flow-arrow {{
+            text-align: center;
+            font-size: 2em;
+            color: #667eea;
+            margin: 10px 0;
+        }}
+
+        .sensor-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }}
+
+        .sensor-card {{
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-top: 4px solid #667eea;
+        }}
+
+        .sensor-card h4 {{
+            color: #667eea;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }}
+
+        .sensor-card .sensor-name {{
+            color: #999;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }}
+
+        .sensor-card .sensor-description {{
+            color: #555;
+            margin: 15px 0;
+            line-height: 1.8;
+        }}
+
+        .sensor-card .sensor-stats {{
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }}
+
+        .sensor-card .stat-row {{
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 0.9em;
+        }}
+
+        .sensor-card .stat-label {{
+            color: #666;
+        }}
+
+        .sensor-card .stat-value {{
+            font-weight: bold;
+            color: #333;
+        }}
+
+        .timeline {{
+            margin: 40px 0;
+            position: relative;
+        }}
+
+        .timeline::before {{
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            transform: translateX(-50%);
+        }}
+
+        .timeline-item {{
+            display: flex;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }}
+
+        .timeline-item:nth-child(odd) .timeline-content {{
+            margin-left: auto;
+            margin-right: calc(50% + 40px);
+        }}
+
+        .timeline-item:nth-child(even) .timeline-content {{
+            margin-left: calc(50% + 40px);
+        }}
+
+        .timeline-marker {{
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 4px solid #667eea;
+            border-radius: 50%;
+            z-index: 1;
+        }}
+
+        .timeline-content {{
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 45%;
+        }}
+
+        .timeline-content h4 {{
+            color: #667eea;
+            margin-bottom: 10px;
+        }}
+
+        @media (max-width: 768px) {{
+            .timeline::before {{
+                left: 20px;
+            }}
+
+            .timeline-marker {{
+                left: 20px;
+            }}
+
+            .timeline-item:nth-child(odd) .timeline-content,
+            .timeline-item:nth-child(even) .timeline-content {{
+                margin-left: 60px;
+                margin-right: 0;
+                width: calc(100% - 60px);
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 독립변수(공변량) Table 1</h1>
+            <p>Covariates Descriptive Statistics and Time-series Data Aggregation</p>
+            <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                생성 일시: {datetime.now().strftime("%Y년 %m월 %d일 %H:%M:%S")}
+            </p>
+        </div>
+
+        <div class="content">
+            <!-- Table 1 -->
+            <div class="section">
+                <h2>📋 Table 1: Covariates Descriptive Statistics</h2>
+
+                <div class="info-box">
+                    <h4>독립변수 개요</h4>
+                    <p>
+                        Cox Proportional Hazards 모델의 독립변수로 사용되는 10개의 웨어러블 센서 데이터입니다.
+                        각 변수는 생리학적 상태와 행동 패턴을 반영하며, 정신건강 이벤트 예측에 활용됩니다.
+                    </p>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    {table_df.to_html(index=False, border=0, classes='data-table')}
+                </div>
+
+                <div class="info-box" style="margin-top: 30px;">
+                    <h4>해석 가이드</h4>
+                    <ul>
+                        <li><strong>N:</strong> 결측치를 제외한 유효 샘플 수</li>
+                        <li><strong>Mean ± SD:</strong> 평균값과 표준편차</li>
+                        <li><strong>Q1, Median, Q3:</strong> 25%, 50%, 75% 분위수</li>
+                        <li><strong>Min, Max:</strong> 최소값과 최대값</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 센서별 상세 정보 -->
+            <div class="section">
+                <h2>🔬 센서별 상세 정보</h2>
+
+                <div class="sensor-grid">
+                    <div class="sensor-card">
+                        <h4>💓 심혈관계 센서</h4>
+                        <div class="sensor-name">Cardiovascular Sensors</div>
+                        <div class="sensor-description">
+                            <strong>• Heart Beat (심박수):</strong> 분당 심장 박동 수. 스트레스 및 불안과 강한 상관관계<br>
+                            <strong>• HRV (심박변이도):</strong> 심박 간격의 변동성. 자율신경계 균형 지표<br>
+                            <strong>• Oxygen Saturation (산소포화도):</strong> 혈액 내 산소 포화 비율. 호흡 및 순환 상태 반영
+                        </div>
+                    </div>
+
+                    <div class="sensor-card">
+                        <h4>🌡️ 체온 센서</h4>
+                        <div class="sensor-name">Temperature Sensors</div>
+                        <div class="sensor-description">
+                            <strong>• Body Temperature (체온):</strong> 신체 중심 온도. 일주기 리듬 및 스트레스 반응 반영<br>
+                            <strong>• Skin Temperature (피부온도):</strong> 피부 표면 온도. 교감신경 활성도 및 정서 상태 지표
+                        </div>
+                    </div>
+
+                    <div class="sensor-card">
+                        <h4>😴 수면 센서</h4>
+                        <div class="sensor-name">Sleep Sensors</div>
+                        <div class="sensor-description">
+                            <strong>• Total Sleep (총 수면시간):</strong> 전체 수면 시간. 수면의 양적 지표<br>
+                            <strong>• REM Sleep:</strong> 급속 안구 운동 수면. 꿈꾸는 수면 단계<br>
+                            <strong>• Deep Sleep (깊은 수면):</strong> 서파 수면. 회복적 수면의 질적 지표
+                        </div>
+                    </div>
+
+                    <div class="sensor-card">
+                        <h4>🚶 활동 센서</h4>
+                        <div class="sensor-name">Activity Sensors</div>
+                        <div class="sensor-description">
+                            <strong>• Walk (걷기):</strong> 일일 걸음 수. 신체 활동 수준의 직접적 지표<br>
+                            <strong>• Stick Sensor (스틱 센서):</strong> 움직임 카운트. 전반적인 활동 강도 측정
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 시계열 데이터 취합 과정 -->
+            <div class="section">
+                <h2>⏱️ 시계열 데이터 취합 과정</h2>
+
+                <div class="info-box">
+                    <h4>개요</h4>
+                    <p>
+                        웨어러블 센서는 24시간 연속적으로 생체 신호를 수집합니다.
+                        이러한 고빈도 시계열 데이터를 생존 분석에 활용하기 위해
+                        일정 기간 단위로 집계(aggregation)하는 과정이 필요합니다.
+                    </p>
+                </div>
+
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>Step 1: 원시 데이터 수집</h4>
+                            <p><strong>수집 주기:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>심박수: 1분 단위</li>
+                                <li>체온/피부온도: 5분 단위</li>
+                                <li>걸음 수: 실시간 카운팅</li>
+                                <li>산소포화도: 1분 단위</li>
+                            </ul>
+                            <p style="margin-top: 10px;"><strong>데이터 형식:</strong> 타임스탬프 + 센서값</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>Step 2: 일별 집계</h4>
+                            <p><strong>집계 방법:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li><strong>평균:</strong> 심박수, 체온, 피부온도, 산소포화도, HRV</li>
+                                <li><strong>합계:</strong> 걸음 수, 스틱 센서</li>
+                                <li><strong>총 시간:</strong> 총 수면, REM 수면, 깊은 수면</li>
+                            </ul>
+                            <p style="margin-top: 10px;">
+                                <strong>결측치 처리:</strong> 24시간 중 80% 이상 데이터가 있는 경우에만 집계
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>Step 3: 품질 관리</h4>
+                            <p><strong>이상치 탐지:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>생리학적 범위 검증 (예: 심박수 40-200 bpm)</li>
+                                <li>IQR 기반 극단값 탐지 (1.5×IQR 기준)</li>
+                                <li>센서 오작동 패턴 감지 (동일 값 연속 반복 등)</li>
+                            </ul>
+                            <p style="margin-top: 10px;">
+                                <strong>처리:</strong> 이상치는 제거하거나 전후 값의 이동평균으로 보정
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>Step 4: 시간 윈도우 정의</h4>
+                            <p><strong>관측 윈도우:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>일별 집계 데이터를 기반으로 관측 구간 설정</li>
+                                <li>활동 수준에 따라 3단계 계층 구분</li>
+                                <li>각 계층별로 차등화된 관측 기간 할당</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>Step 5: 정신건강 설문과 매칭</h4>
+                            <p><strong>동기화:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>정신건강 설문 응답 시점 확인</li>
+                                <li>설문 시점 기준 ±3일 내 센서 데이터 평균</li>
+                                <li>설문-센서 쌍 데이터 생성</li>
+                            </ul>
+                            <p style="margin-top: 10px;">
+                                <strong>결과:</strong> 각 설문 응답마다 대응하는 센서 특징 벡터 생성
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>Step 6: 최종 데이터셋 구성</h4>
+                            <p><strong>구조:</strong></p>
+                            <ul style="margin-left: 20px;">
+                                <li>각 행: 하나의 관측 시점</li>
+                                <li>10개 센서 특징 + 타겟 점수 + 메타데이터</li>
+                                <li>Duration 및 Event 변수 생성</li>
+                            </ul>
+                            <p style="margin-top: 10px;">
+                                <strong>검증:</strong> 최종 데이터셋의 일관성 및 완전성 확인
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 데이터 전처리 -->
+            <div class="section">
+                <h2>🔧 데이터 전처리</h2>
+
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <h4>1. 결측치 처리</h4>
+                        <p><strong>전략:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li><strong>MCAR (Missing Completely At Random):</strong> Listwise deletion</li>
+                            <li><strong>MAR (Missing At Random):</strong> 이동평균 또는 보간법</li>
+                            <li><strong>MNAR (Missing Not At Random):</strong> 해당 변수 제외</li>
+                            <li><strong>기준:</strong> 결측률 30% 이상인 변수는 분석에서 제외</li>
+                        </ul>
+                    </div>
+
+                    <div class="flow-arrow">↓</div>
+
+                    <div class="flow-step">
+                        <h4>2. 표준화 (Standardization)</h4>
+                        <p><strong>방법: Z-score 정규화</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>각 변수를 평균 0, 표준편차 1로 변환</li>
+                            <li>공식: z = (x - μ) / σ</li>
+                            <li><strong>목적:</strong>
+                                <ul style="margin-left: 20px;">
+                                    <li>서로 다른 단위의 변수들을 동일 스케일로</li>
+                                    <li>Cox 모델 계수의 비교 가능성 향상</li>
+                                    <li>수치적 안정성 확보</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="flow-arrow">↓</div>
+
+                    <div class="flow-step">
+                        <h4>3. 다중공선성 검사</h4>
+                        <p><strong>지표: VIF (Variance Inflation Factor)</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>VIF > 10: 심각한 다중공선성</li>
+                            <li>VIF 5-10: 중등도 다중공선성</li>
+                            <li><strong>조치:</strong> 높은 VIF 변수 중 하나 제거 또는 PCA 적용</li>
+                            <li><strong>대안:</strong> L2 정규화 (penalizer=0.1) 사용</li>
+                        </ul>
+                    </div>
+
+                    <div class="flow-arrow">↓</div>
+
+                    <div class="flow-step">
+                        <h4>4. 최종 검증</h4>
+                        <p><strong>체크리스트:</strong></p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>✓ 모든 변수가 수치형인지 확인</li>
+                            <li>✓ 무한대(inf) 또는 NaN 값 없음</li>
+                            <li>✓ 충분한 샘플 크기 (이벤트당 최소 10-15 샘플)</li>
+                            <li>✓ Duration > 0 조건 만족</li>
+                            <li>✓ Event 변수가 0 또는 1인지 확인</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 시간적 특성 -->
+            <div class="section">
+                <h2>⏰ 시간적 특성 및 주기성</h2>
+
+                <div class="info-box">
+                    <h4>일주기 리듬 (Circadian Rhythm)</h4>
+                    <p>
+                        많은 센서 변수들은 24시간 주기의 일주기 리듬을 따릅니다:
+                    </p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>체온:</strong> 이른 아침 최저, 오후-저녁 최고</li>
+                        <li><strong>심박수:</strong> 수면 중 감소, 활동 시 증가</li>
+                        <li><strong>활동:</strong> 낮 시간대 집중, 야간 최소</li>
+                    </ul>
+                    <p style="margin-top: 15px;">
+                        <strong>고려사항:</strong> 일별 집계를 통해 일주기 변동성을 평균화하여
+                        개인의 전반적인 생리학적 상태를 대표하는 값을 도출합니다.
+                    </p>
+                </div>
+
+                <div class="info-box">
+                    <h4>주간 패턴 (Weekly Pattern)</h4>
+                    <p>
+                        일부 변수는 요일별 차이를 보일 수 있습니다:
+                    </p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>활동량:</strong> 평일 vs. 주말 차이</li>
+                        <li><strong>수면:</strong> 주말 수면 시간 증가 경향</li>
+                        <li><strong>스트레스:</strong> 업무일과 휴식일의 차이</li>
+                    </ul>
+                    <p style="margin-top: 15px;">
+                        <strong>처리:</strong> 설문 시점 기준 ±3일 윈도우를 사용하여
+                        단기 변동성을 포착하면서도 요일 효과를 완화합니다.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 데이터 품질 지표 -->
+            <div class="section">
+                <h2>✅ 데이터 품질 지표</h2>
+
+                <div class="info-box">
+                    <h4>1. 완전성 (Completeness)</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>센서 가동률:</strong> 전체 관측 기간 중 데이터가 기록된 비율</li>
+                        <li><strong>기준:</strong> 80% 이상의 가동률을 가진 데이터만 사용</li>
+                        <li><strong>일별 완전성:</strong> 각 변수가 하루 24시간 중 얼마나 측정되었는지</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>2. 정확성 (Accuracy)</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>센서 캘리브레이션:</strong> 주기적인 센서 보정</li>
+                        <li><strong>교차 검증:</strong> 다른 센서 데이터와의 일치성 확인</li>
+                        <li><strong>생리학적 타당성:</strong> 의학적으로 가능한 범위 내 값인지 검증</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>3. 일관성 (Consistency)</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>시계열 연속성:</strong> 급격한 값 변화 탐지</li>
+                        <li><strong>센서 간 일관성:</strong> 관련 센서 간 논리적 관계 확인</li>
+                        <li><strong>예:</strong> 높은 활동량 시 심박수 증가, 체온 상승 예상</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>4. 적시성 (Timeliness)</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>동기화:</strong> 센서 데이터와 설문 응답의 시간적 근접성</li>
+                        <li><strong>최대 시차:</strong> ±3일 이내</li>
+                        <li><strong>이상적:</strong> 설문 당일 센서 데이터 사용</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 향후 개선 방향 -->
+            <div class="section">
+                <h2>🚀 향후 개선 방향</h2>
+
+                <div class="info-box">
+                    <h4>고급 시계열 특징 추출</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>변동성 지표:</strong> 표준편차, 변이계수, entropy</li>
+                        <li><strong>추세 특징:</strong> 선형 회귀 기울기, 시간에 따른 변화율</li>
+                        <li><strong>주기성 특징:</strong> FFT, autocorrelation, 스펙트럼 분석</li>
+                        <li><strong>이상 이벤트:</strong> 임계값 초과 횟수, 급격한 변화 빈도</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>시간 의존 Cox 모델</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>센서 데이터를 시간 의존 공변량으로 사용</li>
+                        <li>각 시점마다 업데이트되는 위험도 추정</li>
+                        <li>실시간 위험 예측 시스템 구축</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>딥러닝 기반 특징 학습</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>LSTM/GRU: 시계열 패턴 자동 학습</li>
+                        <li>Transformer: 장기 의존성 포착</li>
+                        <li>Autoencoder: 저차원 표현 학습</li>
+                        <li>DeepSurv: 생존 분석 특화 신경망</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: #f8f9fa; text-align: center; padding: 40px; color: #666;">
+            <p><strong>KLOSDOM Lifelog Pattern Data Generation System</strong></p>
+            <p>Covariates Table 1 and Time-series Data Aggregation</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+    return html_content
+
+def main():
+    """메인 실행 함수"""
+    print("\n" + "="*80)
+    print("독립변수 Table 1 및 시계열 데이터 취합 과정 생성")
+    print("="*80)
+
+    # 데이터 로드
+    datasets = load_data_for_analysis()
+
+    # Table 1 생성
+    table_df = create_covariates_table1(datasets)
+
+    # HTML 리포트 생성
+    html_content = generate_html_report(table_df)
+
+    # 저장
+    output_dir = Path("survival_analysis_new_threshold")
+    output_dir.mkdir(exist_ok=True)
+
+    output_path = output_dir / "covariates_table1.html"
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+
+    print(f"\n✅ Table 1 리포트 생성 완료!")
+    print(f"   📄 파일: {output_path.absolute()}")
+    print(f"\n" + "="*80)
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,513 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>좌표 변환 생존 분석 성능 비교</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 50px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .content {
+            padding: 50px;
+        }
+        .section {
+            margin-bottom: 50px;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+        .section h2 {
+            color: #667eea;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 4px solid #667eea;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        .comparison-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .comparison-card h3 {
+            color: #667eea;
+            font-size: 1.6em;
+            margin-bottom: 20px;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .metric-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .metric-value {
+            font-weight: bold;
+            color: #333;
+        }
+        .best-performer {
+            background: linear-gradient(135deg, #4caf5015 0%, #45a04915 100%);
+            border-left: 5px solid #4caf50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+        .highlight-best {
+            background: #4caf5030;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        .info-box {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-left: 5px solid #667eea;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 10px;
+        }
+        .info-box h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📐 좌표 변환 생존 분석</h1>
+            <p>Coordinate Transformation Survival Analysis Performance Comparison</p>
+            <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                생성 일시: 2026년 06월 28일 23:29:23
+            </p>
+        </div>
+
+        <div class="content">
+            <!-- 개요 -->
+            <div class="section">
+                <h2>📋 분석 개요</h2>
+                <div class="info-box">
+                    <h4>목적</h4>
+                    <p>
+                        센서 데이터를 다양한 좌표계로 변환하여 특징 공간을 확장하고,
+                        생존 분석 모델의 성능 향상을 도모합니다. 극좌표, 구면좌표, 원통좌표로
+                        변환된 데이터를 사용하여 Cox PH 모델을 학습하고, 원본 데이터 대비 성능을 비교합니다.
+                    </p>
+                </div>
+
+                <div class="info-box">
+                    <h4>좌표 변환 방법</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>극좌표(Polar):</strong> 2D 변수 쌍 (x, y) → (r, θ)
+                            <ul style="margin-left: 20px;">
+                                <li>r = √(x² + y²)</li>
+                                <li>θ = arctan(y/x)</li>
+                            </ul>
+                        </li>
+                        <li style="margin-top: 10px;"><strong>구면좌표(Sphere):</strong> 3D 변수 트리플렛 (x, y, z) → (r, θ, φ)
+                            <ul style="margin-left: 20px;">
+                                <li>r = √(x² + y² + z²)</li>
+                                <li>θ = arctan(y/x)</li>
+                                <li>φ = arccos(z/r)</li>
+                            </ul>
+                        </li>
+                        <li style="margin-top: 10px;"><strong>원통좌표(Cylinder):</strong> 3D 변수 트리플렛 (x, y, z) → (ρ, φ, z)
+                            <ul style="margin-left: 20px;">
+                                <li>ρ = √(x² + y²)</li>
+                                <li>φ = arctan(y/x)</li>
+                                <li>z = z (그대로)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- DEPRESSION 성능 비교 -->
+            <div class="section">
+                <h2>💙 DEPRESSION 성능 비교</h2>
+
+                <div class="comparison-grid">
+
+                    <div class="comparison-card">
+                        <h3>직교좌표 (Cartesian)</h3>
+                        
+                        <div class="metric-row">
+                            <span class="metric-label">C-index</span>
+                            <span class="metric-value" style="color: #667eea;">0.6121</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Log-likelihood</span>
+                            <span class="metric-value">-19893.44</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">AIC</span>
+                            <span class="metric-value">39806.89</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">LR Test p-value</span>
+                            <span class="metric-value">1.7832e-74</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">특징 개수</span>
+                            <span class="metric-value">10</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-card">
+                        <h3>극좌표 (Polar)</h3>
+                        
+                        <div class="metric-row">
+                            <span class="metric-label">C-index</span>
+                            <span class="metric-value" style="color: #667eea;">0.6291</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Log-likelihood</span>
+                            <span class="metric-value">-1799.94</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">AIC</span>
+                            <span class="metric-value">3619.87</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">LR Test p-value</span>
+                            <span class="metric-value">6.9099e-01</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">특징 개수</span>
+                            <span class="metric-value">10</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-card">
+                        <h3>구면좌표 (Sphere)</h3>
+                        
+                        <div class="metric-row">
+                            <span class="metric-label">C-index</span>
+                            <span class="metric-value" style="color: #667eea;">0.6451</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Log-likelihood</span>
+                            <span class="metric-value">-1798.76</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">AIC</span>
+                            <span class="metric-value">3617.53</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">LR Test p-value</span>
+                            <span class="metric-value">4.6674e-01</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">특징 개수</span>
+                            <span class="metric-value">10</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-card best-performer">
+                        <h3>원통좌표 (Cylinder)</h3>
+                        <p style="color: #4caf50; font-weight: bold; margin-bottom: 15px;">🏆 최고 성능</p>
+                        <div class="metric-row">
+                            <span class="metric-label">C-index</span>
+                            <span class="metric-value" style="color: #667eea;">0.6555</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Log-likelihood</span>
+                            <span class="metric-value">-1796.70</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">AIC</span>
+                            <span class="metric-value">3613.40</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">LR Test p-value</span>
+                            <span class="metric-value">1.8074e-01</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">특징 개수</span>
+                            <span class="metric-value">10</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <h3 style="color: #764ba2; margin-top: 30px;">직교좌표 대비 성능 변화</h3>
+                <p style="color: #666; margin: 15px 0;">기준: C-index 0.6121</p>
+                <div style="overflow-x: auto;">
+                    <table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Coordinate</th>
+      <th>C-index</th>
+      <th>Improvement</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Polar</td>
+      <td>0.6291</td>
+      <td>+2.78%</td>
+      <td>향상</td>
+    </tr>
+    <tr>
+      <td>Sphere</td>
+      <td>0.6451</td>
+      <td>+5.40%</td>
+      <td>향상</td>
+    </tr>
+    <tr>
+      <td>Cylinder</td>
+      <td>0.6555</td>
+      <td>+7.08%</td>
+      <td>향상</td>
+    </tr>
+  </tbody>
+</table>
+                </div>
+
+            </div>
+
+            <!-- STRESS 성능 비교 -->
+            <div class="section">
+                <h2>💚 STRESS 성능 비교</h2>
+
+                <div class="comparison-grid">
+
+                    <div class="comparison-card best-performer">
+                        <h3>직교좌표 (Cartesian)</h3>
+                        <p style="color: #4caf50; font-weight: bold; margin-bottom: 15px;">🏆 최고 성능</p>
+                        <div class="metric-row">
+                            <span class="metric-label">C-index</span>
+                            <span class="metric-value" style="color: #667eea;">0.7128</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Log-likelihood</span>
+                            <span class="metric-value">-69857.29</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">AIC</span>
+                            <span class="metric-value">139734.57</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">LR Test p-value</span>
+                            <span class="metric-value">0.0000e+00</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">특징 개수</span>
+                            <span class="metric-value">10</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-card">
+                        <h3>극좌표 (Polar)</h3>
+                        
+                        <div class="metric-row">
+                            <span class="metric-label">C-index</span>
+                            <span class="metric-value" style="color: #667eea;">0.6709</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Log-likelihood</span>
+                            <span class="metric-value">-11299.45</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">AIC</span>
+                            <span class="metric-value">22618.89</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">LR Test p-value</span>
+                            <span class="metric-value">2.1150e-56</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">특징 개수</span>
+                            <span class="metric-value">10</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-card">
+                        <h3>구면좌표 (Sphere)</h3>
+                        
+                        <div class="metric-row">
+                            <span class="metric-label">C-index</span>
+                            <span class="metric-value" style="color: #667eea;">0.6960</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Log-likelihood</span>
+                            <span class="metric-value">-11270.79</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">AIC</span>
+                            <span class="metric-value">22561.59</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">LR Test p-value</span>
+                            <span class="metric-value">1.5600e-68</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">특징 개수</span>
+                            <span class="metric-value">10</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-card">
+                        <h3>원통좌표 (Cylinder)</h3>
+                        
+                        <div class="metric-row">
+                            <span class="metric-label">C-index</span>
+                            <span class="metric-value" style="color: #667eea;">0.6849</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Log-likelihood</span>
+                            <span class="metric-value">-11249.38</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">AIC</span>
+                            <span class="metric-value">22518.76</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">LR Test p-value</span>
+                            <span class="metric-value">1.2437e-77</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">특징 개수</span>
+                            <span class="metric-value">10</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <h3 style="color: #764ba2; margin-top: 30px;">직교좌표 대비 성능 변화</h3>
+                <p style="color: #666; margin: 15px 0;">기준: C-index 0.7128</p>
+                <div style="overflow-x: auto;">
+                    <table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Coordinate</th>
+      <th>C-index</th>
+      <th>Improvement</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Polar</td>
+      <td>0.6709</td>
+      <td>-5.88%</td>
+      <td>감소</td>
+    </tr>
+    <tr>
+      <td>Sphere</td>
+      <td>0.6960</td>
+      <td>-2.35%</td>
+      <td>감소</td>
+    </tr>
+    <tr>
+      <td>Cylinder</td>
+      <td>0.6849</td>
+      <td>-3.91%</td>
+      <td>감소</td>
+    </tr>
+  </tbody>
+</table>
+                </div>
+
+            </div>
+
+            <!-- 결론 및 권장사항 -->
+            <div class="section">
+                <h2>💡 결론 및 권장사항</h2>
+
+                <div class="info-box">
+                    <h4>주요 발견사항</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>좌표 변환을 통한 특징 공간 확장이 모델 성능에 영향</li>
+                        <li>각 타겟별로 최적의 좌표계가 다를 수 있음</li>
+                        <li>변환된 특징이 센서 간 비선형 관계를 더 잘 포착</li>
+                        <li>고차원 좌표계(구면, 원통)가 복잡한 패턴 학습에 유리할 수 있음</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>임상 적용 권장사항</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>최고 성능 좌표계를 선택하여 실시간 모니터링 시스템 구축</li>
+                        <li>앙상블 모델: 여러 좌표계 결과를 결합하여 robust prediction</li>
+                        <li>타겟별 특화된 좌표계 사용으로 예측 정확도 향상</li>
+                        <li>해석 가능성과 성능 사이의 trade-off 고려</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>향후 연구 방향</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>자동 좌표계 선택 알고리즘 개발</li>
+                        <li>좌표 변환 파라미터 최적화</li>
+                        <li>딥러닝 기반 좌표 변환 학습</li>
+                        <li>외부 데이터셋에서의 일반화 성능 검증</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: #f8f9fa; text-align: center; padding: 40px; color: #666;">
+            <p><strong>KLOSDOM Lifelog Pattern Data Generation System</strong></p>
+            <p>Coordinate Transformation Survival Analysis</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+            </p>
+        </div>
+    </div>
+</body>
+</html>
