@@ -107,9 +107,11 @@
 
 본 연구에 사용된 KLOSDOM 전처리 데이터셋의 세부 특성은 Table 1에 요약하였다. 전체 281,138개의 라이프로그 기록을 사용하였으며, 세 가지 정신건강 타겟(불안, 우울, 스트레스)에 대해 각각 Train/Validation/Test로 분할하였다. 셀프체크 점수 4점 이상을 이벤트로 정의하였으며, 타겟별 이벤트 비율은 불안 6.6%, 우울 47.4%, 스트레스 24.6%로 나타났다.
 
-![Table 1: 데이터셋의 기본 특성](figures/phenotyping/table1_dataset_characteristics.png)
+각 특징변수는 타겟별로 이벤트군(score≥4)과 정상군(score<4)에서 서로 다른 패턴을 보였다. 특히 걸음수(walk)는 모든 타겟에서 이벤트군이 정상군보다 낮았으며(불안: -3.3%, 우울: -2.2%, 스트레스: -4.8%), 심박변이도(hrv)도 모든 타겟에서 이벤트군이 낮았다(불안: -1.9%, 우울: -2.9%, 스트레스: -0.9%).
 
-**Table 1: 데이터셋의 기본 특성 (N=281,138).** KLOSDOM 전처리 데이터셋의 샘플 분포, 특징 변수, 데이터 전처리 방법을 요약. 세 가지 정신건강 타겟(Anxiety, Depression, Stress)에 대해 Train/Validation/Test 분할 및 이벤트 비율 제시. 이벤트는 셀프체크 점수 ≥ 4점으로 정의.
+![Table 1: 데이터셋의 기본 특성 및 타겟별 통계](figures/phenotyping/table1_dataset_characteristics_with_stats.png)
+
+**Table 1: 데이터셋의 기본 특성 및 타겟별 특징변수 통계 (N=281,138).** KLOSDOM 전처리 데이터셋의 샘플 분포, 특징 변수, 데이터 전처리 방법을 요약. 세 가지 정신건강 타겟(Anxiety, Depression, Stress)에 대해 Train/Validation/Test 분할 및 이벤트 비율 제시. 각 특징변수는 타겟별로 정상군(score<4) 평균 → 이벤트군(score≥4) 평균 형식으로 표시. Anx=Anxiety, Dep=Depression, Str=Stress.
 
 ### 2.2 피노타입 정의
 
