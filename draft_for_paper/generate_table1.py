@@ -8,6 +8,10 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from pathlib import Path
 
+# 한글 폰트 설정
+plt.rcParams['font.family'] = 'Apple SD Gothic Neo'
+plt.rcParams['axes.unicode_minus'] = False  # 마이너스 기호 깨짐 방지
+
 print("=" * 70)
 print("Table 1: 데이터셋 기본 특성 생성")
 print("=" * 70)
