@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>생존 분석 데이터 구조 상세 설명</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 50px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .content {
+            padding: 50px;
+        }
+        .section {
+            margin-bottom: 50px;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+        .section h2 {
+            color: #667eea;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 4px solid #667eea;
+        }
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.6em;
+            margin: 30px 0 20px 0;
+        }
+        .info-box {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-left: 5px solid #667eea;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 10px;
+        }
+        .info-box h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .info-box ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        .info-box li {
+            margin: 8px 0;
+        }
+        .highlight-box {
+            background: linear-gradient(135deg, #4caf5015 0%, #45a04915 100%);
+            border: 2px solid #4caf50;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 10px;
+        }
+        .highlight-box h4 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        .warning-box {
+            background: linear-gradient(135deg, #ff980015 0%, #ff572215 100%);
+            border: 2px solid #ff9800;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 10px;
+        }
+        .warning-box h4 {
+            color: #e65100;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        .comparison-table {
+            width: 100%;
+            margin: 30px 0;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px;
+            text-align: left;
+        }
+        .comparison-table td {
+            padding: 14px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .comparison-table tr:hover {
+            background: #f5f5f5;
+        }
+        .timeline {
+            position: relative;
+            padding: 40px 0;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            transform: translateX(-50%);
+        }
+        .timeline-item {
+            display: flex;
+            margin: 30px 0;
+            position: relative;
+        }
+        .timeline-item:nth-child(odd) .timeline-content {
+            margin-left: auto;
+            margin-right: calc(50% + 30px);
+        }
+        .timeline-item:nth-child(even) .timeline-content {
+            margin-left: calc(50% + 30px);
+        }
+        .timeline-marker {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 18px;
+            height: 18px;
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .timeline-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 45%;
+        }
+        .timeline-content h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        @media (max-width: 768px) {
+            .timeline::before {
+                left: 20px;
+            }
+            .timeline-marker {
+                left: 20px;
+            }
+            .timeline-item:nth-child(odd) .timeline-content,
+            .timeline-item:nth-child(even) .timeline-content {
+                margin-left: 50px;
+                margin-right: 0;
+                width: calc(100% - 50px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 데이터 구조 상세 설명</h1>
+            <p>Cox PH 생존 분석 입력 데이터의 구조와 측정 시점</p>
+            <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                생성 일시: 2026년 6월 28일
+            </p>
+        </div>
+
+        <div class="content">
+            <!-- 데이터 구조 개요 -->
+            <div class="section">
+                <h2>🔍 데이터 구조 개요</h2>
+
+                <div class="highlight-box">
+                    <h4>✓ 핵심 요약</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>각 행 = 하나의 독립적인 관측 단위</strong> (Cross-sectional 데이터)</li>
+                        <li><strong>각 센서 변수 = 변수당 하나의 값</strong> (Time-Fixed Covariates)</li>
+                        <li><strong>측정 시점 = 정신건강 설문 응답 시점 ±3일</strong></li>
+                        <li><strong>Duration = 활동 수준별로 할당된 가상의 관측 기간</strong></li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>데이터 행렬 구조</h4>
+                    <div class="code-block">
+행 1: [센서1, 센서2, ..., 센서10, duration, event]<br>
+행 2: [센서1, 센서2, ..., 센서10, duration, event]<br>
+행 3: [센서1, 센서2, ..., 센서10, duration, event]<br>
+...<br>
+<br>
+• 행(Row): 각각의 독립적인 관측<br>
+• 열(Column): 센서 변수 + Duration + Event<br>
+• 총 12개 컬럼: 10개 센서 + duration + event
+                    </div>
+                </div>
+            </div>
+
+            <!-- 측정 시점 상세 설명 -->
+            <div class="section">
+                <h2>⏰ 측정 시점 상세 설명</h2>
+
+                <div class="highlight-box">
+                    <h4>📌 센서 데이터 측정 시점 기준</h4>
+                    <p style="font-size: 1.1em; margin-bottom: 15px;">
+                        <strong>정신건강 설문 응답 시점을 기준으로 ±3일 이내 센서 데이터의 평균값을 사용합니다.</strong>
+                    </p>
+                    <ul style="margin-left: 20px;">
+                        <li><strong>기준 시점:</strong> 우울/스트레스 설문 응답일</li>
+                        <li><strong>센서 집계 기간:</strong> 설문일 기준 전후 3일 (총 7일 윈도우)</li>
+                        <li><strong>집계 방법:</strong> 해당 기간 내 일별 평균값의 평균</li>
+                        <li><strong>목적:</strong> 설문 응답 시점의 생리학적 상태를 대표하는 안정적인 값 확보</li>
+                    </ul>
+                </div>
+
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>설문일 - 3일</h4>
+                            <p>센서 데이터 수집 시작</p>
+                            <p style="margin-top: 5px; color: #666; font-size: 0.9em;">
+                                일별 센서 평균 계산
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>설문일 - 2일</h4>
+                            <p>센서 데이터 수집 계속</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>설문일 - 1일</h4>
+                            <p>센서 데이터 수집 계속</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker" style="border-color: #e91e63; border-width: 4px;"></div>
+                        <div class="timeline-content" style="border: 2px solid #e91e63;">
+                            <h4 style="color: #e91e63;">설문 응답일 (기준점)</h4>
+                            <p><strong>정신건강 설문 응답</strong></p>
+                            <p style="margin-top: 5px; color: #666; font-size: 0.9em;">
+                                우울/스트레스 점수 측정
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>설문일 + 1일</h4>
+                            <p>센서 데이터 수집 계속</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>설문일 + 2일</h4>
+                            <p>센서 데이터 수집 계속</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>설문일 + 3일</h4>
+                            <p>센서 데이터 수집 종료</p>
+                            <p style="margin-top: 5px; color: #666; font-size: 0.9em;">
+                                7일간의 평균값 계산
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h4>측정 시점 설정 근거</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>±3일 윈도우 사용 이유:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>단일 일의 데이터는 일시적 변동성이 클 수 있음</li>
+                                <li>7일 평균으로 안정적인 생리학적 상태 반영</li>
+                                <li>설문 응답 시점과 시간적으로 가까워 인과관계 추론 가능</li>
+                            </ul>
+                        </li>
+                        <li style="margin-top: 10px;"><strong>일별 평균의 평균 사용:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>각 날마다 센서 데이터를 일별로 집계 (평균)</li>
+                                <li>7일간의 일별 평균값을 다시 평균</li>
+                                <li>이상치 및 센서 오류의 영향 최소화</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ 주의사항</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>측정 기간 중 센서 데이터가 80% 미만으로 수집된 경우 해당 관측치 제외</li>
+                        <li>센서 오작동 또는 이상치가 발견된 날은 집계에서 제외</li>
+                        <li>설문 응답 시점이 정확하지 않은 경우 응답 기록 시간을 기준으로 사용</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Time-Fixed vs Time-Varying -->
+            <div class="section">
+                <h2>⏱️ Time-Fixed Covariates vs Time-Varying Covariates</h2>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>특성</th>
+                            <th>Time-Fixed (현재 방식)</th>
+                            <th>Time-Varying (대안)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>데이터 형태</strong></td>
+                            <td>각 관측치마다 하나의 값</td>
+                            <td>각 시점마다 업데이트되는 값</td>
+                        </tr>
+                        <tr>
+                            <td><strong>측정 시점</strong></td>
+                            <td>설문 응답 시점 ±3일</td>
+                            <td>연속적으로 변화하는 시간</td>
+                        </tr>
+                        <tr>
+                            <td><strong>데이터 구조</strong></td>
+                            <td>각 행 = 독립적 관측</td>
+                            <td>한 대상자가 여러 행</td>
+                        </tr>
+                        <tr>
+                            <td><strong>장점</strong></td>
+                            <td>
+                                • 구현 및 해석이 간단<br>
+                                • 계산 효율적<br>
+                                • 안정적인 값 사용
+                            </td>
+                            <td>
+                                • 실시간 변화 반영<br>
+                                • 더 정확한 위험 추정<br>
+                                • 동적 예측 가능
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>단점</strong></td>
+                            <td>
+                                • 시간에 따른 변화 미반영<br>
+                                • 단일 시점 의존성
+                            </td>
+                            <td>
+                                • 복잡한 모델링<br>
+                                • 더 많은 데이터 필요<br>
+                                • 계산 비용 증가
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>적용 시나리오</strong></td>
+                            <td>
+                                특정 시점 상태 기반 위험 예측
+                            </td>
+                            <td>
+                                실시간 모니터링 및 동적 위험 평가
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="info-box">
+                    <h4>현재 방식 선택 이유</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>연구 목적에 부합:</strong> 특정 시점의 생리학적 상태와 정신건강 상태의 연관성 분석</li>
+                        <li><strong>데이터 가용성:</strong> 각 개인마다 설문 응답 시점이 다르고 빈도가 낮음</li>
+                        <li><strong>해석 용이성:</strong> 센서 값이 고정되어 있어 Hazard Ratio 해석이 명확</li>
+                        <li><strong>계산 효율성:</strong> 대규모 데이터셋에서도 빠른 학습 가능</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Duration 설명 -->
+            <div class="section">
+                <h2>📅 Duration (생존시간) 설정</h2>
+
+                <div class="info-box">
+                    <h4>Duration의 의미</h4>
+                    <p>
+                        생존 분석에서 Duration은 관측 시작부터 이벤트 발생(또는 관측 종료)까지의 시간입니다.
+                        본 연구에서는 <strong>활동 수준(Level)</strong>에 따라 차등화된 관측 기간을 할당하였습니다.
+                    </p>
+                </div>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Activity Level</th>
+                            <th>Level 명</th>
+                            <th>Duration 범위</th>
+                            <th>평균 Duration</th>
+                            <th>설명</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Level 0</strong></td>
+                            <td>낮은 활동</td>
+                            <td>10-40일</td>
+                            <td>~25일</td>
+                            <td>초기 관측 기간, 낮은 활동 수준</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Level 1</strong></td>
+                            <td>중간 활동</td>
+                            <td>40-70일</td>
+                            <td>~55일</td>
+                            <td>중기 관측 기간, 중간 활동 수준</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Level 2</strong></td>
+                            <td>높은 활동</td>
+                            <td>70-93일</td>
+                            <td>~81.5일</td>
+                            <td>후기 관측 기간, 높은 활동 수준</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="warning-box">
+                    <h4>⚠️ 주의: Duration은 실제 관측 시간이 아님</h4>
+                    <p style="margin-top: 10px;">
+                        현재 분석에서 사용된 Duration은 <strong>시뮬레이션된 값</strong>입니다.
+                        활동 수준에 따라 균등 분포로 랜덤하게 할당되었으며, 실제 종단 추적 기간을 나타내지 않습니다.
+                    </p>
+                    <p style="margin-top: 15px;">
+                        <strong>향후 개선 방향:</strong>
+                    </p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>실제 설문 응답 간격을 Duration으로 사용</li>
+                        <li>다회차 설문 데이터로 진정한 종단 분석 수행</li>
+                        <li>개인별 실제 추적 기간 반영</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Event 정의 -->
+            <div class="section">
+                <h2>🎯 Event (종단점) 정의</h2>
+
+                <div class="highlight-box">
+                    <h4>✓ 이벤트 발생 기준</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>우울(Depression):</strong> Depression Score ≥ 6점</li>
+                        <li><strong>스트레스(Stress):</strong> Stress Score ≥ 5점</li>
+                    </ul>
+                    <p style="margin-top: 15px;">
+                        임계값 이상의 점수는 임상적으로 의미있는 증상 수준을 나타내며,
+                        조기 개입이 필요한 시점으로 정의됩니다.
+                    </p>
+                </div>
+
+                <div class="info-box">
+                    <h4>Event vs Censored</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Event = 1 (이벤트 발생):</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>설문 시점에 임계값 이상의 점수 측정</li>
+                                <li>Cox 모델에서 이 시점을 이벤트 발생 시점으로 간주</li>
+                                <li>해당 관측치의 센서 값이 이벤트와 연관된 특징으로 학습됨</li>
+                            </ul>
+                        </li>
+                        <li style="margin-top: 10px;"><strong>Event = 0 (Censored, 미발생):</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>설문 시점에 임계값 미만의 점수</li>
+                                <li>관측 종료 시점까지 이벤트 미발생</li>
+                                <li>Right-censored 데이터로 처리</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 데이터 전처리 -->
+            <div class="section">
+                <h2>🔧 데이터 전처리</h2>
+
+                <h3>1. 표준화 (Z-score Normalization)</h3>
+                <div class="info-box">
+                    <h4>적용 방법</h4>
+                    <div class="code-block">
+scaler = StandardScaler()<br>
+X_standardized = scaler.fit_transform(X)<br>
+<br>
+# 각 변수를 평균 0, 표준편차 1로 변환<br>
+# z = (x - μ) / σ
+                    </div>
+                    <p style="margin-top: 15px;"><strong>적용 시점:</strong> Cox PH 모델 학습 직전</p>
+                    <p style="margin-top: 10px;"><strong>목적:</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li>서로 다른 단위의 센서 변수들을 동일 스케일로 변환</li>
+                        <li>Hazard Ratio의 비교 가능성 향상</li>
+                        <li>수치적 안정성 확보</li>
+                    </ul>
+                </div>
+
+                <h3>2. 결측치 처리</h3>
+                <div class="info-box">
+                    <h4>전략</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Listwise Deletion:</strong> 센서 변수 중 하나라도 결측인 행 제거</li>
+                        <li><strong>기준:</strong> 결측률 30% 이상 변수는 분석에서 제외</li>
+                        <li><strong>보정:</strong> 일시적 센서 오류는 이동평균으로 보간</li>
+                    </ul>
+                </div>
+
+                <h3>3. 이상치 탐지</h3>
+                <div class="info-box">
+                    <h4>방법</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>생리학적 범위 검증:</strong> 각 센서의 의학적 정상 범위 확인</li>
+                        <li><strong>IQR 기반 탐지:</strong> Q1 - 1.5×IQR ~ Q3 + 1.5×IQR 범위 벗어난 값</li>
+                        <li><strong>센서 오작동 패턴:</strong> 동일 값 연속 반복, 급격한 변화 등</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 향후 개선 방향 -->
+            <div class="section">
+                <h2>🚀 향후 개선 방향</h2>
+
+                <div class="info-box">
+                    <h4>1. Time-Varying Covariates 도입</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>센서 데이터의 시간적 변화를 Cox 모델에 반영</li>
+                        <li>실시간 위험도 업데이트 가능</li>
+                        <li>동적 예측 모델 구축</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>2. 실제 종단 데이터 활용</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>다회차 설문 데이터로 진정한 종단 분석</li>
+                        <li>실제 관측 기간을 Duration으로 사용</li>
+                        <li>개인별 변화 패턴 포착</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <h4>3. 고급 시계열 특징 추출</h4>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>변동성 지표: 표준편차, 변이계수</li>
+                        <li>추세 특징: 기울기, 변화율</li>
+                        <li>주기성 분석: FFT, autocorrelation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: #f8f9fa; text-align: center; padding: 40px; color: #666;">
+            <p><strong>KLOSDOM Lifelog Pattern Data Generation System</strong></p>
+            <p>Data Structure Detailed Explanation</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                Generated on 2026-06-28
+            </p>
+        </div>
+    </div>
+</body>
+</html>
