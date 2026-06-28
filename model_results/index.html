@@ -454,6 +454,11 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Threshold 분석 -->
+            <button class="tab-button" onclick="openExternalPage('threshold_analysis_report.html', event)" style="background: linear-gradient(135deg, #ff7675 0%, #d63031 100%); color: white; font-weight: bold;">
+                <span class="tab-icon">🎯</span>Threshold 분석
+            </button>
         </div>
 
         <!-- 콘텐츠 영역 -->
@@ -469,11 +474,12 @@
 
                     <!-- 핵심 성과 강조 -->
                     <div class="stats-highlight">
-                        <h3>🏆 핵심 성과 요약</h3>
+                        <h3>🏆 핵심 성과 요약 (6점 이상 기준 적용)</h3>
+                        <p>📊 <strong>이벤트 정의:</strong> 셀프체크 점수 6점 이상(≥6.0)을 이벤트로 정의하여 일관된 기준 적용</p>
                         <p>✨ <strong>극좌표 변환:</strong> 모든 타겟에서 평균 +27.6% 성능 향상 (C-index 0.536 → 0.684)</p>
-                        <p>🎯 <strong>Stress 이진 분류:</strong> 임계값 조정으로 Recall 87% 달성 (기준선 22% → 87%)</p>
+                        <p>🧬 <strong>피노타이핑:</strong> 5가지 정신건강 피노타입 정의, 표준화 구좌표에서 C-index 0.7216 (+34.85%) 달성</p>
                         <p>🔬 <strong>특성 그룹화:</strong> HYBRID 방법이 평균 C-index 0.665로 최고 성능</p>
-                        <p>🧬 <strong>피노타이핑 (NEW!):</strong> 5가지 정신건강 피노타입 정의, 표준화 구좌표에서 C-index 0.7216 (+34.85%) 달성</p>
+                        <p>🎯 <strong>이벤트 비율:</strong> 불안 0.07%, 우울 18.3%, 스트레스 26.4% (6점 이상 기준)</p>
                     </div>
 
                     <div class="cards-grid">
