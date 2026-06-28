@@ -421,6 +421,39 @@
             <button class="tab-button" onclick="openExternalPage('../model_results_grouping_method_comparison/comparison_report.html', event)">
                 <span class="tab-icon">🔬</span>특성 그룹화 비교
             </button>
+
+            <!-- 피노타이핑 분석 -->
+            <div class="tab-group">
+                <button class="tab-button dropdown" onclick="toggleDropdown('phenotype-dropdown', event)" style="background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%); color: white; font-weight: bold;">
+                    <span class="tab-icon">🧬</span>피노타이핑
+                </button>
+                <div id="phenotype-dropdown" class="dropdown-content">
+                    <div class="dropdown-item" onclick="openExternalPage('../draft_for_paper/phenotyping_paper.md', event)">
+                        📄 피노타이핑 논문
+                    </div>
+                    <div class="dropdown-item" onclick="openExternalPage('../phenotype_analysis_results/phenotype_separation_visualization.html', event)">
+                        📊 피노타입 분리 시각화
+                    </div>
+                    <div class="dropdown-item" onclick="openExternalPage('../phenotype_analysis_results/anxiety_spherical_phenotype_3d.html', event)">
+                        😰 Anxiety (Spherical 3D)
+                    </div>
+                    <div class="dropdown-item" onclick="openExternalPage('../phenotype_analysis_results/depression_spherical_phenotype_3d.html', event)">
+                        😔 Depression (Spherical 3D)
+                    </div>
+                    <div class="dropdown-item" onclick="openExternalPage('../phenotype_analysis_results/stress_spherical_phenotype_3d.html', event)">
+                        😫 Stress (Spherical 3D)
+                    </div>
+                    <div class="dropdown-item" onclick="openExternalPage('../phenotype_analysis_results/anxiety_cylindrical_phenotype_3d.html', event)">
+                        😰 Anxiety (Cylindrical 3D)
+                    </div>
+                    <div class="dropdown-item" onclick="openExternalPage('../phenotype_analysis_results/depression_cylindrical_phenotype_3d.html', event)">
+                        😔 Depression (Cylindrical 3D)
+                    </div>
+                    <div class="dropdown-item" onclick="openExternalPage('../phenotype_analysis_results/stress_cylindrical_phenotype_3d.html', event)">
+                        😫 Stress (Cylindrical 3D)
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 콘텐츠 영역 -->
@@ -440,6 +473,7 @@
                         <p>✨ <strong>극좌표 변환:</strong> 모든 타겟에서 평균 +27.6% 성능 향상 (C-index 0.536 → 0.684)</p>
                         <p>🎯 <strong>Stress 이진 분류:</strong> 임계값 조정으로 Recall 87% 달성 (기준선 22% → 87%)</p>
                         <p>🔬 <strong>특성 그룹화:</strong> HYBRID 방법이 평균 C-index 0.665로 최고 성능</p>
+                        <p>🧬 <strong>피노타이핑 (NEW!):</strong> 5가지 정신건강 피노타입 정의, 표준화 구좌표에서 C-index 0.7216 (+34.85%) 달성</p>
                     </div>
 
                     <div class="cards-grid">
@@ -519,6 +553,17 @@
                                 <li>타겟 × 좌표계별 최적 방법 도출</li>
                             </ul>
                         </div>
+
+                        <div class="info-card" style="background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); border: 3px solid #6c5ce7;">
+                            <h3 style="color: #2d3436;">🧬 피노타이핑 분석 (NEW!)</h3>
+                            <ul style="color: #2d3436;">
+                                <li><strong>5가지 정신건강 피노타입 정의</strong></li>
+                                <li>표준화 좌표변환 기반 분류</li>
+                                <li>스트레스 다차원형: C-index 0.7216 (+34.85%)</li>
+                                <li>3D 좌표공간에서 피노타입 분리 시각화</li>
+                                <li>개인화된 모니터링 전략 제시</li>
+                            </ul>
+                        </div>
                     </div>
 
                     <!-- 전체 분석 흐름 -->
@@ -530,6 +575,7 @@
                             <p><strong>3단계:</strong> 좌표 변환 적용 → 극좌표/원통좌표/구면좌표로 특성 공간 재구성</p>
                             <p><strong>4단계:</strong> 특성 그룹화 최적화 → HYBRID 방법으로 성능 극대화</p>
                             <p><strong>5단계:</strong> 생존 분석 → Cox PH 모델로 위험 요인 식별</p>
+                            <p><strong>6단계:</strong> <span style="color: #6c5ce7; font-weight: bold;">🧬 피노타이핑 → 5가지 정신건강 하위유형 정의 및 시각화</span></p>
                         </div>
                     </div>
                 </div>
